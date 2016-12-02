@@ -11,8 +11,15 @@ FMA_TRACK_SINGLE_URL = 'http://freemusicarchive.org/services/track/single/{0}.' 
 
 class Browser:
 
+    _genres = None
     track = None
     tracks = None
+
+    @property
+    def genres(self):
+        if not self._genres:
+            self._load_genres()
+        return self._genres
 
     def get_next_track(self):
         if self.tracks is None:
@@ -23,8 +30,8 @@ class Browser:
         except IndexError:
             return False
 
-    def load_genres(self):
-        self.genres = self._get_dataset('genres')
+    def _load_genres(self):
+        self._genres = self._get_dataset('genres')
 
     def load_tracks(self):
         self.tracks = self._get_tracks()
@@ -67,10 +74,9 @@ def play(url):
     
 if __name__ == '__main__':
     b = Browser()
-    b.load_genres()
     for index, genre in enumerate(b.genres):
         print(index, genre['genre_title'])
-    option = int(input('Choose a genre'))
+    option = int(input('Choose a genre: '))
     b.set_genre(option)
     while b.get_next_track():
         play(b.track)
