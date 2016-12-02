@@ -1,5 +1,8 @@
 import os
 import requests
+import requests_cache
+
+requests_cache.install_cache()  # :)
 
 
 FMA_API_URL = 'https://freemusicarchive.org/api/get/{0}.{1}?api_key={2}'
@@ -45,6 +48,8 @@ class Browser:
 
     def _get_content(self, url):
         response = requests.get(url)
+        print(response.url)
+        print(response.from_cache)
         if  response.ok:
             return response.json()  # will fail for other formats
 
