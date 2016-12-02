@@ -9,37 +9,56 @@ FMA_API_DATASETS = ['artists', 'albums', 'tracks', 'genres', 'curators']
 FMA_TRACK_SINGLE_URL = 'http://freemusicarchive.org/services/track/single/{0}.' + FMA_API_FORMAT
 
 
-def get_dataset(option):
-    return globals()['get_' + option]()
+class Browser:
 
+    track = None
+    tracks = None
 
-def get_content(url):
-    response = requests.get(url)
-    if response.ok:
-        return response.json()  # will fail for other formats
+    def get_next_track(self):
+        if self.tracks is None:
+            self.load_tracks()
+        try:
+            self.track = self._get_track_url(self.tracks.pop())
+            return True
+        except IndexError:
+            return False
 
+    def load_genres(self):
+        self.genres = self._get_dataset('genres')
 
-def build_url(dataset):
-    url = FMA_API_URL.format(dataset, FMA_API_FORMAT, FMA_API_KEY)
-    return url
+    def load_tracks(self):
+        self.tracks = self._get_tracks()
 
+    def set_genre(self, option):
+        self.genre = self.genres[option]
 
-def get_tracks():
-    url = build_url('tracks')
-    data = get_content(url)
-    return data['dataset']
+    def _build_url(self, dataset):
+        url = FMA_API_URL.format(dataset, FMA_API_FORMAT, FMA_API_KEY)
+        return url
 
+    def _get_content(self, url):
+        response = requests.get(url)
+        if  response.ok:
+            return response.json()  # will fail for other formats
 
-def get_track_url(id):
-    content = get_content(FMA_TRACK_SINGLE_URL.format(id))
-    return content['track_listen_url']
-    import pdb; pdb.set_trace()
+    def _get_dataset(self, name):
+        assert name in FMA_API_DATASETS
+        url = self._build_url(name)
+        data = self._get_content(url)
+        return data['dataset']
 
+    def _get_track_url(self, track):
+        id = track['track_id']
+        content = self._get_content(FMA_TRACK_SINGLE_URL.format(id))
+        return content['track_listen_url']
 
-def get_genres():
-    url = build_url('genres')
-    dataset = get_dataset(url)
-    
+    def _get_tracks(self):
+        url = self._build_url('tracks')
+        if self.genre:
+            url += '&genre_id=' + self.genre['genre_id']
+        data = self._get_content(url)
+        return data['dataset']
+
 
 def play(url):
     import subprocess
@@ -47,9 +66,11 @@ def play(url):
 
     
 if __name__ == '__main__':
-    print(list(enumerate(FMA_API_DATASETS)))
-    option = int(input('Choose a datasat'))
-    dataset = get_dataset(FMA_API_DATASETS[option])
-    for item in dataset:
-        track_url = get_track_url(item['track_id'])
-        play(track_url)
+    b = Browser()
+    b.load_genres()
+    for index, genre in enumerate(b.genres):
+        print(index, genre['genre_title'])
+    option = int(input('Choose a genre'))
+    b.set_genre(option)
+    while b.get_next_track():
+        play(b.track)
