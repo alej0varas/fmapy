@@ -1,6 +1,7 @@
 import os
 import requests
 import requests_cache
+import tempfile
 
 requests_cache.install_cache()  # :)
 
@@ -71,6 +72,14 @@ class Browser:
         data = self._get_content(url)
         return data['dataset']
 
+    def play(self):
+        if not self.track:
+            self.get_next_track()
+        track = requests.get(self.track)
+        tmp_track = tempfile.NamedTemporaryFile()
+        tmp_track.write(track.content)
+        play(tmp_track.name)
+
 
 def play(url):
     import subprocess
@@ -83,5 +92,4 @@ if __name__ == '__main__':
         print(index, genre['genre_title'])
     option = int(input('Choose a genre: '))
     b.set_genre(option)
-    while b.get_next_track():
-        play(b.track)
+    b.play()
