@@ -29,7 +29,7 @@ class Browser:
         if self.tracks is None:
             self.load_tracks()
         try:
-            self.track = self._get_track_url(self.tracks.pop())
+            self.track = self.tracks.pop()
             return True
         except IndexError:
             return False
@@ -51,33 +51,40 @@ class Browser:
         response = requests.get(url)
         print(response.url)
         print(response.from_cache)
-        if  response.ok:
-            return response.json()  # will fail for other formats
+        if response.ok:
+            return response
+
+    def _get_content_as_json(self, url):  # as_format?
+        return self._get_content(url).json()
 
     def _get_dataset(self, name):
         assert name in FMA_API_DATASETS
         url = self._build_url(name)
-        data = self._get_content(url)
+        data = self._get_content_as_json(url)
         return data['dataset']
 
-    def _get_track_url(self, track):
-        id = track['track_id']
-        content = self._get_content(FMA_TRACK_SINGLE_URL.format(id))
+    def _get_track_url(self):
+        content = self._get_content_as_json(FMA_TRACK_SINGLE_URL.format(self.track['track_id']))
         return content['track_listen_url']
 
     def _get_tracks(self):
         url = self._build_url('tracks')
         if self.genre:
             url += '&genre_id=' + self.genre['genre_id']
-        data = self._get_content(url)
+        data = self._get_content_as_json(url)
         return data['dataset']
 
     def play(self):
         if not self.track:
             self.get_next_track()
-        track = requests.get(self.track)
+        track = self._get_content(self._get_track_url())
         tmp_track = tempfile.NamedTemporaryFile()
         tmp_track.write(track.content)
+        # logging
+        print(self.track['track_title'])
+        print(self.track['artist_name'])
+        print(self.track['album_title'])
+
         play(tmp_track.name)
 
 
