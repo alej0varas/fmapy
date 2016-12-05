@@ -74,29 +74,42 @@ class Browser:
         data = self._get_content_as_json(url)
         return data['dataset']
 
-    def play(self):
-        if not self.track:
-            self.get_next_track()
-        track = self._get_content(self._get_track_url())
-        tmp_track = tempfile.NamedTemporaryFile()
-        tmp_track.write(track.content)
-        # logging
-        print(self.track['track_title'])
-        print(self.track['artist_name'])
-        print(self.track['album_title'])
 
-        play(tmp_track.name)
+class Player:
+    def __init__(self):
+        b = Browser()
+        for index, genre in enumerate(b.genres):
+            print(index, genre['genre_title'])
+        option = int(input('Choose a genre: '))
+        b.set_genre(option)
+
+        import pygame
+        pygame.mixer.init()
+        m = pygame.mixer.music
+
+        option = 'p'
+        while option is not None:
+            if option == 'q':
+                m.stop()
+                option = None
+                continue
+            if option == 'n':
+                option = 'p'
+            if option == 'p':
+                b.get_next_track()
+                track = b._get_content(b._get_track_url())
+                tmp_track = tempfile.NamedTemporaryFile()
+                tmp_track.write(track.content)
+                # # logging
+                # print(self.track['track_title'])
+                # print(self.track['artist_name'])
+                # print(self.track['album_title'])
+
+                m.load(tmp_track.name)
+                m.play()
+
+            option = input('>> ')
 
 
-def play(url):
-    import subprocess
-    subprocess.Popen(['mpv', '--no-video', '--no-terminal', url]).wait()
-
-    
 if __name__ == '__main__':
-    b = Browser()
-    for index, genre in enumerate(b.genres):
-        print(index, genre['genre_title'])
-    option = int(input('Choose a genre: '))
-    b.set_genre(option)
-    b.play()
+    p = Player()

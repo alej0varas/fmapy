@@ -1,2 +1,3 @@
-requests==2.12.3
+pygame==1.9.2b8
 requests-cache==0.4.12
+requests==2.12.3
