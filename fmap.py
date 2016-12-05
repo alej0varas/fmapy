@@ -4,6 +4,8 @@ import requests_cache
 import tempfile
 import threading
 
+import pygame
+
 requests_cache.install_cache()  # :)
 
 
@@ -50,8 +52,7 @@ class Browser:
 
     def _get_content(self, url):
         response = requests.get(url)
-        print(response.url)
-        print(response.from_cache)
+        print(response.url, ['not', 'in'][response.from_cache], 'cache')
         if response.ok:
             return response
 
@@ -78,6 +79,9 @@ class Browser:
 
 class Player:
 
+    track = None
+    next_track = None
+    next_track_file = None
     t = None
 
     def __init__(self):
@@ -88,10 +92,12 @@ class Player:
         option = int(input('Choose a genre: '))
         self.b.set_genre(option)
 
-        import pygame
-        pygame.mixer.init()
+        pygame.init()
         self.m = pygame.mixer.music
         self.t_stop = threading.Event()
+
+        self.SONG_END = pygame.USEREVENT + 1
+        pygame.mixer.music.set_endevent(self.SONG_END)
 
     def run(self):
         option = 'p'
@@ -106,17 +112,49 @@ class Player:
             option = input('>> ')
 
     def play(self):
-        self.b.get_next_track()
-        track = self.b._get_content(self.b._get_track_url())
-        tmp_track = tempfile.NamedTemporaryFile()
-        tmp_track.write(track.content)
-        print(self.b.track['track_title'], '|',
-              self.b.track['artist_name'], '|',
-              self.b.track['album_title'])
-        self.m.load(tmp_track.name)
-        self.m.play()
-        if self.t is None:
-            self._play_thread()
+        if self.track is None:
+            self.b.get_next_track()
+            self.track = self.b.track
+            self.track_file = self.get_song_cache_file_name()
+
+        try:
+            self.m.load(self.track_file)
+            self.m.play()
+            print(self.track['track_title'], '|',
+                  self.track['artist_name'], '|',
+                  self.track['album_title'], '(',
+                  self.track['track_duration'], ')<',
+                  self.track['track_id'], '>',
+            )
+        except Exception as e:
+            print(e)
+            pass
+
+        if not self.b.get_next_track():
+            print('the end')
+            self.stop()
+        self.track = self.b.track
+        self.track_file = self.get_song_cache_file_name()
+
+        self._play_thread()
+
+    def get_song_cache_file_name(self):
+        project_dir = self.get_project_dir()
+        tmp_track_file_name = os.path.join(project_dir, str(self.b.track['track_id'])) + '.mp3'
+        in_cache = True
+        if not os.path.exists(tmp_track_file_name):
+            in_cache = False
+            with open(tmp_track_file_name, 'wb') as tmp_track:
+                track = self.b._get_content(self.b._get_track_url())
+                tmp_track.write(track.content)
+        print(tmp_track_file_name, ['not', 'in'][in_cache], 'cache')
+        return tmp_track_file_name
+
+    def get_project_dir(self):
+        project_dir = os.path.expanduser(os.path.join('~', '.fmap', 'cache'))
+        if not os.path.exists(project_dir):
+            os.makedirs(project_dir)
+        return project_dir
 
     def stop(self):
         self.m.stop()
@@ -124,7 +162,6 @@ class Player:
         self.q = True
 
     def _play_thread(self):
-
         class PlayThread(threading.Thread):
             def __init__(self, *args, **kwargs):
                 self.p = kwargs['kwargs']['p']
@@ -133,9 +170,13 @@ class Player:
 
             def run(self):
                 while not self.q.is_set():
-                    if not self.p.m.get_busy():
-                        self.p.play()
+                    for event in pygame.event.get():
+                        if event.type == self.p.SONG_END:
+                            self.p.play()
                     self.q.wait(.5)
+
+        if self.t is not None:
+            return
 
         self.t = PlayThread(kwargs={'p': self, 'q': self.t_stop})
         self.t.start()
