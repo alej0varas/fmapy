@@ -107,6 +107,7 @@ class Player:
     next_track = None
     next_track_file = None
     t = None
+    pause = True
 
     def __init__(self):
         self.q = False
@@ -130,10 +131,25 @@ class Player:
                 self.stop()
                 continue
             if option == 'n':
-                option = 'p'
+                self.next()
             if option == 'p':
-                self.play()
+                self.pause()
             option = input('>> ')
+
+    def next(self):
+        self.m.stop()
+        self.play()
+
+    def pause(self):
+        if not self.track:
+            self.play()
+            return
+        if self.is_paused:
+            self.is_paused = False
+            self.m.unpause()
+        else:
+            self.is_paused = True
+            self.m.pause()
 
     def play(self):
         if self.track is None:
@@ -144,6 +160,7 @@ class Player:
         try:
             self.m.load(self.track_file)
             self.m.play()
+            self.is_paused = False
             print(self.track['track_title'], '|',
                   self.track['artist_name'], '|',
                   self.track['album_title'], '(',
