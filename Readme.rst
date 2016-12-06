@@ -13,3 +13,4 @@ Usage
    n - next
    q - quit
    p - play/pause
+   i - info

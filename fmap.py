@@ -134,6 +134,8 @@ class Player:
                 self.next()
             if option == 'p':
                 self.pause()
+            if option == 'i':
+                self.info()
             option = input('>> ')
 
     def next(self):
@@ -152,6 +154,9 @@ class Player:
             self.m.pause()
 
     def play(self):
+        if self.next_track is not None:
+            self.track = self.next_track
+            self.track_file = self.next_track_file
         if self.track is None:
             self.b.get_next_track()
             self.track = self.b.track
@@ -161,12 +166,7 @@ class Player:
             self.m.load(self.track_file)
             self.m.play()
             self.is_paused = False
-            print(self.track['track_title'], '|',
-                  self.track['artist_name'], '|',
-                  self.track['album_title'], '(',
-                  self.track['track_duration'], ')<',
-                  self.track['track_id'], '>',
-            )
+            self.info()
         except Exception as e:
             print(e)
             self.track = None
@@ -176,10 +176,18 @@ class Player:
         if not self.b.get_next_track():
             print('the end')
             self.stop()
-        self.track = self.b.track
-        self.track_file = self.get_song_cache_file_name()
+        self.next_track = self.b.track
+        self.next_track_file = self.get_song_cache_file_name()
 
         self._play_thread()
+
+    def info(self):
+        print(self.track['track_title'], '|',
+              self.track['artist_name'], '|',
+              self.track['album_title'], '(',
+              self.track['track_duration'], ')<',
+              self.track['track_id'], '>',
+        )
 
     def get_song_cache_file_name(self):
         project_dir = get_project_dir('cache')
