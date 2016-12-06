@@ -24,7 +24,7 @@ def get_project_dir(subdir=''):
 
 requests_cache.install_cache(
     os.path.join(get_project_dir('cache'),
-    'requests_cache.sqlite')
+    'requests_cache')
     ) # :)
 
 
