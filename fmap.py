@@ -169,7 +169,9 @@ class Player:
             )
         except Exception as e:
             print(e)
-            pass
+            self.track = None
+            self.play()
+            return
 
         if not self.b.get_next_track():
             print('the end')
