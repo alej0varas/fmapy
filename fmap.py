@@ -157,6 +157,8 @@ class Player:
         if self.next_track is not None:
             self.track = self.next_track
             self.track_file = self.next_track_file
+            self.next_track = None
+            self.next_track_file = None
         if self.track is None:
             self.b.get_next_track()
             self.track = self.b.track
