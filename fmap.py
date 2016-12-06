@@ -13,6 +13,7 @@ FMA_API_URL = 'https://freemusicarchive.org/api/get/{0}.{1}?api_key={2}'
 FMA_API_KEY = os.environ.get('FMA_API_KEY')
 FMA_API_FORMAT = os.environ.get('FMA_API_FORMAT', 'json')
 FMA_API_DATASETS = ['artists', 'albums', 'tracks', 'genres', 'curators']
+FMA_API_ITEMS_LIMIT = 50
 FMA_TRACK_SINGLE_URL = 'http://freemusicarchive.org/services/track/single/{0}.' + FMA_API_FORMAT
 
 
@@ -21,6 +22,7 @@ class Browser:
     _genres = None
     track = None
     tracks = None
+    page = None
 
     @property
     def genres(self):
@@ -31,11 +33,15 @@ class Browser:
     def get_next_track(self):
         if self.tracks is None:
             self.load_tracks()
+        if self.page > self.total_pages:
+            return False
         try:
             self.track = self.tracks.pop()
-            return True
         except IndexError:
-            return False
+            self.page += 1
+            self.tracks = None
+            return self.get_next_track()
+        return True
 
     def _load_genres(self):
         self._genres = self._get_dataset('genres')
@@ -53,11 +59,13 @@ class Browser:
     def _get_content(self, url):
         response = requests.get(url)
         print(response.url, ['not', 'in'][response.from_cache], 'cache')
+
         if response.ok:
             return response
 
     def _get_content_as_json(self, url):  # as_format?
-        return self._get_content(url).json()
+        content = self._get_content(url).json()
+        return content
 
     def _get_dataset(self, name):
         assert name in FMA_API_DATASETS
@@ -73,7 +81,12 @@ class Browser:
         url = self._build_url('tracks')
         if self.genre:
             url += '&genre_id=' + self.genre['genre_id']
+        if self.page is not None:
+            url += '&page=' + str(self.page)
+        url += '&limit=' + str(FMA_API_ITEMS_LIMIT)
         data = self._get_content_as_json(url)
+        self.page = data['page']
+        self.total_pages = data['total_pages']
         return data['dataset']
 
 
