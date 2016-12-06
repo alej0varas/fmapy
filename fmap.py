@@ -6,8 +6,6 @@ import threading
 
 import pygame
 
-requests_cache.install_cache()  # :)
-
 
 FMA_API_URL = 'https://freemusicarchive.org/api/get/{0}.{1}?api_key={2}'
 FMA_API_KEY = os.environ.get('FMA_API_KEY')
@@ -15,6 +13,19 @@ FMA_API_FORMAT = os.environ.get('FMA_API_FORMAT', 'json')
 FMA_API_DATASETS = ['artists', 'albums', 'tracks', 'genres', 'curators']
 FMA_API_ITEMS_LIMIT = 50
 FMA_TRACK_SINGLE_URL = 'http://freemusicarchive.org/services/track/single/{0}.' + FMA_API_FORMAT
+
+
+def get_project_dir(subdir=''):
+    project_dir = os.path.expanduser(os.path.join('~', '.fmap', subdir))
+    if not os.path.exists(project_dir):
+        os.makedirs(project_dir)
+    return project_dir
+
+
+requests_cache.install_cache(
+    os.path.join(get_project_dir('cache'),
+    'requests_cache.sqlite')
+    ) # :)
 
 
 class Browser:
@@ -152,7 +163,7 @@ class Player:
         self._play_thread()
 
     def get_song_cache_file_name(self):
-        project_dir = self.get_project_dir()
+        project_dir = get_project_dir('cache')
         tmp_track_file_name = os.path.join(project_dir, str(self.b.track['track_id'])) + '.mp3'
         in_cache = True
         if not os.path.exists(tmp_track_file_name):
@@ -162,12 +173,6 @@ class Player:
                 tmp_track.write(track.content)
         print(tmp_track_file_name, ['not', 'in'][in_cache], 'cache')
         return tmp_track_file_name
-
-    def get_project_dir(self):
-        project_dir = os.path.expanduser(os.path.join('~', '.fmap', 'cache'))
-        if not os.path.exists(project_dir):
-            os.makedirs(project_dir)
-        return project_dir
 
     def stop(self):
         self.m.stop()
