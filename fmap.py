@@ -84,8 +84,8 @@ class Browser:
         data = self._get_content_as_json(url)
         return data['dataset']
 
-    def _get_track_url(self):
-        content = self._get_content_as_json(FMA_TRACK_SINGLE_URL.format(self.track['track_id']))
+    def _get_track_url(self, track):
+        content = self._get_content_as_json(FMA_TRACK_SINGLE_URL.format(track['track_id']))
         return content['track_listen_url']
 
     def _get_tracks(self):
@@ -162,7 +162,7 @@ class Player:
         if self.track is None:
             self.b.get_next_track()
             self.track = self.b.track
-            self.track_file = self.get_song_cache_file_name()
+            self.track_file = self.get_song_cache_file_name(self.track)
 
         try:
             self.m.load(self.track_file)
@@ -179,7 +179,7 @@ class Player:
             print('the end')
             self.stop()
         self.next_track = self.b.track
-        self.next_track_file = self.get_song_cache_file_name()
+        self.next_track_file = self.get_song_cache_file_name(self.next_track)
 
         self._play_thread()
 
@@ -191,14 +191,14 @@ class Player:
               self.track['track_id'], '>',
         )
 
-    def get_song_cache_file_name(self):
+    def get_song_cache_file_name(self, track):
         project_dir = get_project_dir('cache')
-        tmp_track_file_name = os.path.join(project_dir, str(self.b.track['track_id'])) + '.mp3'
+        tmp_track_file_name = os.path.join(project_dir, str(track['track_id'])) + '.mp3'
         in_cache = True
         if not os.path.exists(tmp_track_file_name):
             in_cache = False
             with open(tmp_track_file_name, 'wb') as tmp_track:
-                track = self.b._get_content(self.b._get_track_url())
+                track = self.b._get_content(self.b._get_track_url(track))
                 tmp_track.write(track.content)
         print(tmp_track_file_name, ['not', 'in'][in_cache], 'cache')
         return tmp_track_file_name
