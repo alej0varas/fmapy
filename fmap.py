@@ -136,6 +136,8 @@ class Player:
                 self.pause()
             if option == 'i':
                 self.info()
+            if option == 'f':
+                self.favourite()
             option = input('>> ')
 
     def next(self):
@@ -190,6 +192,21 @@ class Player:
               self.track['track_duration'], ')<',
               self.track['track_id'], '>',
         )
+
+    def favourite(self):
+        favourites_file_path = os.path.join(get_project_dir('favourite'), 'favourites.txt')
+        favourites = []
+        try:
+            favourites_file = open(favourites_file_path, 'r')
+            favourites = [i.strip() for i in favourites_file.readlines()]
+            favourites_file.close()
+        except FileNotFoundError:
+            pass
+        favourites.append(self.track['track_id'])
+        favourites = set(favourites)
+        favourites = '\n'.join(favourites)
+        with open(favourites_file_path, 'w') as favourites_file:
+            favourites_file.write(favourites)
 
     def get_song_cache_file_name(self, track):
         project_dir = get_project_dir('cache')
