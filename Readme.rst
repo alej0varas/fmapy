@@ -12,6 +12,8 @@ Usage
 
    n - next
    q - quit
+   g - choose gender(parent)
+   s - search gender(all)
    p - play/pause
    f - favourite
    i - info

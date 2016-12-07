@@ -28,17 +28,18 @@ requests_cache.install_cache(
     ) # :)
 
 
+class Genre:
+    pass
+
+
 class Browser:
 
-    _genres = None
-    track = None
-    tracks = None
-    page = None
+    genres_all = []
 
-    @property
+    def __init__(self):
+        self._init()
+
     def genres(self):
-        if not self._genres:
-            self._load_genres()
         return self._genres
 
     def get_next_track(self):
@@ -55,11 +56,9 @@ class Browser:
         return True
 
     def _load_genres(self):
-        class Genre:
-            pass
-
+        if self.genres_all:
+            return
         page = None
-        genres = {}
         while True:
             dataset, page = self._get_dataset('genres', page)
             if dataset is None:
@@ -68,16 +67,34 @@ class Browser:
                 g = Genre()
                 g.__dict__.update(genre)
 
-                if not g.genre_parent_id:
-                    genres[g.genre_id] = g
+                self.genres_all.append(g)
+
             page = str(int(page) + 1)
+
+    def load_parent_genres(self):
+        genres = [g for g in self.genres_all if not g.genre_parent_id]
+        self._genres = genres
+
+    def load_term_genres(self, term):
+        genres = [g for g in self.genres_all if term.lower() in g.genre_title.lower()]
         self._genres = genres
 
     def load_tracks(self):
+        self._init()
         self.tracks = self._get_tracks()
 
     def set_genre(self, option):
-        self.genre = self.genres[option]
+        self.genre = option
+
+    def set_genres(self, genres):
+        self._genres = genres
+
+    def _init(self):
+        self._genres = None
+        self.track = None
+        self.tracks = None
+        self.page = None
+        self._load_genres()
 
     def _build_url(self, dataset):
         url = FMA_API_URL.format(dataset, FMA_API_FORMAT, FMA_API_KEY)
@@ -124,24 +141,14 @@ class Browser:
 
 class Player:
 
-    track = None
-    next_track = None
-    next_track_file = None
     t = None
     pause = True
 
     def __init__(self):
         self.q = False
         self.b = Browser()
-        genres_sorted = list(self.b.genres)
-        genres_sorted.sort(key=lambda x: self.b.genres[x].genre_title)
-        enumerated = list(enumerate(genres_sorted))
 
-        for index, genre in enumerated:
-            genre = self.b.genres[genre]
-            print(index, genre.genre_title)
-        option = int(input('Choose a genre: '))
-        self.b.set_genre(enumerated[option][1])
+        self._init()
 
         pygame.init()
         self.m = pygame.mixer.music
@@ -150,21 +157,31 @@ class Player:
         self.SONG_END = pygame.USEREVENT + 1
         pygame.mixer.music.set_endevent(self.SONG_END)
 
+    def _init(self):
+        self.track = None
+        self.next_track = None
+        self.next_track_file = None
+        self.b._init()
+
     def run(self):
-        option = 'p'
         while not self.q:
+            option = input('>> ')
             if option == 'q':
                 self.stop()
                 continue
-            if option == 'n':
-                self.next()
-            if option == 'p':
-                self.pause()
-            if option == 'i':
-                self.info()
-            if option == 'f':
-                self.favourite()
-            option = input('>> ')
+            if option == 'g':
+                self.choose_by_genre_list()
+            if option == 's':
+                self.choose_by_genre_search()
+            if self.track:
+                if option == 'n':
+                    self.next()
+                if option == 'p':
+                    self.pause()
+                if option == 'i':
+                    self.info()
+                if option == 'f':
+                    self.favourite()
 
     def next(self):
         self.m.stop()
@@ -233,6 +250,31 @@ class Player:
         favourites = '\n'.join(favourites)
         with open(favourites_file_path, 'w') as favourites_file:
             favourites_file.write(favourites)
+
+    def choose_by_genre(self):
+        genres_sorted = self.b.genres()
+        genres_sorted.sort(key=lambda x: x.genre_title)
+        enumerated = list(enumerate(genres_sorted))
+        for index, genre in enumerated:
+            print(index, genre.genre_title)
+        option = int(input('Choose a genre: '))
+        self.b.set_genre(enumerated[option][1])
+
+    def choose_by_genre_list(self):
+        self._init()
+        self.b.load_parent_genres()
+        self.choose_by_genre()
+        self.play()
+
+    def choose_by_genre_search(self):
+        self._init()
+        term = input("I'm feeling lucky: ")
+        self.b.load_term_genres(term)
+        if not self.b.genres():
+            print('no genres found')
+            return
+        self.choose_by_genre()
+        self.play()
 
     def get_song_cache_file_name(self, track):
         project_dir = get_project_dir('cache')
