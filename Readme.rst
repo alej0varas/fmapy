@@ -13,4 +13,5 @@ Usage
    n - next
    q - quit
    p - play/pause
+   f - favourite
    i - info
