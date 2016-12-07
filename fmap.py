@@ -55,7 +55,23 @@ class Browser:
         return True
 
     def _load_genres(self):
-        self._genres = self._get_dataset('genres')
+        class Genre:
+            pass
+
+        page = None
+        genres = {}
+        while True:
+            dataset, page = self._get_dataset('genres', page)
+            if dataset is None:
+                break
+            for genre in dataset:
+                g = Genre()
+                g.__dict__.update(genre)
+
+                if not g.genre_parent_id:
+                    genres[g.genre_id] = g
+            page = str(int(page) + 1)
+        self._genres = genres
 
     def load_tracks(self):
         self.tracks = self._get_tracks()
@@ -78,11 +94,16 @@ class Browser:
         content = self._get_content(url).json()
         return content
 
-    def _get_dataset(self, name):
+    def _get_dataset(self, name, page=None):
         assert name in FMA_API_DATASETS
         url = self._build_url(name)
+        if page is not None:
+            url += '&page=' + page
         data = self._get_content_as_json(url)
-        return data['dataset']
+
+        if page is not None and int(data['page']) < int(page):
+            return None, None
+        return data['dataset'], data['page']
 
     def _get_track_url(self, track):
         content = self._get_content_as_json(FMA_TRACK_SINGLE_URL.format(track['track_id']))
@@ -91,7 +112,7 @@ class Browser:
     def _get_tracks(self):
         url = self._build_url('tracks')
         if self.genre:
-            url += '&genre_id=' + self.genre['genre_id']
+            url += '&genre_id=' + self.genre.genre_id
         if self.page is not None:
             url += '&page=' + str(self.page)
         url += '&limit=' + str(FMA_API_ITEMS_LIMIT)
@@ -112,10 +133,15 @@ class Player:
     def __init__(self):
         self.q = False
         self.b = Browser()
-        for index, genre in enumerate(self.b.genres):
-            print(index, genre['genre_title'])
+        genres_sorted = list(self.b.genres)
+        genres_sorted.sort(key=lambda x: self.b.genres[x].genre_title)
+        enumerated = list(enumerate(genres_sorted))
+
+        for index, genre in enumerated:
+            genre = self.b.genres[genre]
+            print(index, genre.genre_title)
         option = int(input('Choose a genre: '))
-        self.b.set_genre(option)
+        self.b.set_genre(enumerated[option][1])
 
         pygame.init()
         self.m = pygame.mixer.music
