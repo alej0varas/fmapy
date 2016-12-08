@@ -14,6 +14,7 @@ Usage
    q - quit
    g - choose gender(parent)
    s - search gender(all)
+   r - play random genre :sunglasses:
    p - play/pause
    f - favourite
    i - info
