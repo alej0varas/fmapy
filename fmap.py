@@ -1,4 +1,5 @@
 import os
+import random
 import requests
 import requests_cache
 import tempfile
@@ -78,6 +79,10 @@ class Browser:
     def load_term_genres(self, term):
         genres = [g for g in self.genres_all if term.lower() in g.genre_title.lower()]
         self._genres = genres
+
+    def load_random_genre(self):
+        self.set_genre(random.choice(self.genres_all))
+        self.load_tracks()
 
     def load_tracks(self):
         self._init()
@@ -173,6 +178,8 @@ class Player:
                 self.choose_by_genre_list()
             if option == 's':
                 self.choose_by_genre_search()
+            if option == 'r':
+                self.play_random_genre()
             if self.track:
                 if option == 'n':
                     self.next()
@@ -274,6 +281,11 @@ class Player:
             print('no genres found')
             return
         self.choose_by_genre()
+        self.play()
+
+    def play_random_genre(self):
+        self._init()
+        self.b.load_random_genre()
         self.play()
 
     def get_song_cache_file_name(self, track):
