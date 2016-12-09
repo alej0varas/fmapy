@@ -1,20 +1,24 @@
 ===================================
- (ALPHA) Free Music Archive Player
+ (BETA) Free Music Archive Player
 ===================================
+
+THANKS to http://freemusicarchive.org/ for the music!
 
 Only tested on ubuntu 15.10 XD
 Requires libsmpeg0: apt install libsmpeg0
 
-$ FMA_API_KEY=<YOUR FMA KEY> python3 fmap.py
+::
+
+   $ FMA_API_KEY=<YOUR FMA KEY> python3 fmap.py
 
 Usage
 ::
 
-   n - next
-   q - quit
+   r - play random genre :sunglasses:
    g - choose gender(parent)
    s - search gender(all)
-   r - play random genre :sunglasses:
-   p - play/pause
+   n - next
    f - favourite
+   p - pause/unpause
    i - info
+   q - quit

@@ -2,7 +2,6 @@ import os
 import random
 import requests
 import requests_cache
-import tempfile
 import threading
 
 import pygame
@@ -13,7 +12,11 @@ FMA_API_KEY = os.environ.get('FMA_API_KEY')
 FMA_API_FORMAT = os.environ.get('FMA_API_FORMAT', 'json')
 FMA_API_DATASETS = ['artists', 'albums', 'tracks', 'genres', 'curators']
 FMA_API_ITEMS_LIMIT = 50
-FMA_TRACK_SINGLE_URL = 'http://freemusicarchive.org/services/track/single/{0}.' + FMA_API_FORMAT
+FMA_TRACK_SINGLE_URL = ('https://freemusicarchive.org/services/track/single/'
+                        '{0}.' + FMA_API_FORMAT)
+
+assert FMA_API_KEY, ("You need to provide your FMA KEY as an environment "
+                     "variable('FMA_API_KEY')")
 
 
 def get_project_dir(subdir=''):
@@ -24,136 +27,126 @@ def get_project_dir(subdir=''):
 
 
 requests_cache.install_cache(
-    os.path.join(get_project_dir('cache'),
-    'requests_cache')
-    ) # :)
+    os.path.join(get_project_dir('cache'), 'requests_cache')
+)  # :)
+
+
+def get_dataset_item_class(dataset_name):
+    class_name = dataset_name[:-1].capitalize()
+    return globals()[class_name]
+
+
+class Content:
+    def get_content(self, url, json=True):
+        response = requests.get(url)
+        print(response.url, ['not', 'in'][response.from_cache], 'cache')
+
+        if response.ok:
+            if json:
+                return response.json()
+            else:
+                return response.content
 
 
 class Genre:
     pass
 
 
-class Browser:
+class Track(Content):
+    def get_url(self):
+        content = self.get_content(FMA_TRACK_SINGLE_URL.format(self.track_id))
+        return content['track_listen_url']
 
-    genres_all = []
+
+class BaseBrowser(Content):
 
     def __init__(self):
-        self._init()
+        self.items = []
+        self.base_url = FMA_API_URL.format(
+            self.dataset_name, FMA_API_FORMAT, FMA_API_KEY
+        )
 
-    def genres(self):
-        return self._genres
+    def load_dataset_all(self):
+        [i for i in self._load_dataset_all()]
 
-    def get_next_track(self):
-        if self.tracks is None:
-            self.load_tracks()
-        if self.page > self.total_pages:
-            return False
-        try:
-            self.track = self.tracks.pop()
-        except IndexError:
-            self.page += 1
-            self.tracks = None
-            return self.get_next_track()
-        return True
+    def load_dataset_by_page(self):
+        return self._load_dataset_all()
 
-    def _load_genres(self):
-        if self.genres_all:
-            return
+    def get_url(self):
+        return self.base_url
+
+    def _load_dataset_all(self):
         page = None
         while True:
-            dataset, page = self._get_dataset('genres', page)
+            dataset, page = self._load_dataset_page(page)
             if dataset is None:
                 break
-            for genre in dataset:
-                g = Genre()
-                g.__dict__.update(genre)
-
-                self.genres_all.append(g)
-
+            self._set_items(dataset)
             page = str(int(page) + 1)
+            yield
 
-    def load_parent_genres(self):
-        genres = [g for g in self.genres_all if not g.genre_parent_id]
-        self._genres = genres
-
-    def load_term_genres(self, term):
-        genres = [g for g in self.genres_all if term.lower() in g.genre_title.lower()]
-        self._genres = genres
-
-    def load_random_genre(self):
-        self.set_genre(random.choice(self.genres_all))
-        self.load_tracks()
-
-    def load_tracks(self):
-        self._init()
-        self.tracks = self._get_tracks()
-
-    def set_genre(self, option):
-        self.genre = option
-
-    def set_genres(self, genres):
-        self._genres = genres
-
-    def _init(self):
-        self._genres = None
-        self.track = None
-        self.tracks = None
-        self.page = None
-        self._load_genres()
-
-    def _build_url(self, dataset):
-        url = FMA_API_URL.format(dataset, FMA_API_FORMAT, FMA_API_KEY)
-        return url
-
-    def _get_content(self, url):
-        response = requests.get(url)
-        print(response.url, ['not', 'in'][response.from_cache], 'cache')
-
-        if response.ok:
-            return response
-
-    def _get_content_as_json(self, url):  # as_format?
-        content = self._get_content(url).json()
-        return content
-
-    def _get_dataset(self, name, page=None):
-        assert name in FMA_API_DATASETS
-        url = self._build_url(name)
+    def _load_dataset_page(self, page=None):
+        url = self.get_url()
         if page is not None:
             url += '&page=' + page
-        data = self._get_content_as_json(url)
+        url += '&limit=' + str(FMA_API_ITEMS_LIMIT)
+
+        data = self.get_content(url)
 
         if page is not None and int(data['page']) < int(page):
             return None, None
         return data['dataset'], data['page']
 
-    def _get_track_url(self, track):
-        content = self._get_content_as_json(FMA_TRACK_SINGLE_URL.format(track['track_id']))
-        return content['track_listen_url']
+    def _set_items(self, dataset):
+        for item in dataset:
+            i = get_dataset_item_class(self.dataset_name)()
+            i.__dict__.update(item)
+            self.items.append(i)
 
-    def _get_tracks(self):
-        url = self._build_url('tracks')
+
+class GenresBrowser(BaseBrowser):
+    dataset_name = 'genres'
+
+    def __init__(self):
+        super(GenresBrowser, self).__init__()
+        self.load_dataset_all()
+
+
+class TrackBrowser(BaseBrowser):
+    dataset_name = 'tracks'
+    page = 0
+    pager = None
+    genre = None
+
+    def __init__(self):
+        super(TrackBrowser, self).__init__()
+
+    def get_url(self):
+        url = self.base_url
         if self.genre:
             url += '&genre_id=' + self.genre.genre_id
-        if self.page is not None:
-            url += '&page=' + str(self.page)
-        url += '&limit=' + str(FMA_API_ITEMS_LIMIT)
-        data = self._get_content_as_json(url)
-        self.page = data['page']
-        self.total_pages = data['total_pages']
-        return data['dataset']
+        return url
+
+    def load_next_page(self):
+        if getattr(self, 'pager') is None:
+            self.pager = self.load_dataset_by_page()
+        self.pager.__next__()
+
+    def set_genre(self, genre):
+        self.genre = genre
 
 
 class Player:
 
     t = None
-    pause = True
+    is_playing = True
+    tracks = None
+    current_track_index = -1
 
     def __init__(self):
         self.q = False
-        self.b = Browser()
-
-        self._init()
+        self.gb = GenresBrowser()
+        self.tb = TrackBrowser()
 
         pygame.init()
         self.m = pygame.mixer.music
@@ -162,89 +155,37 @@ class Player:
         self.SONG_END = pygame.USEREVENT + 1
         pygame.mixer.music.set_endevent(self.SONG_END)
 
-    def _init(self):
-        self.track = None
-        self.next_track = None
-        self.next_track_file = None
-        self.b._init()
-
-    def run(self):
-        while not self.q:
-            option = input('>> ')
-            if option == 'q':
-                self.stop()
-                continue
-            if option == 'g':
-                self.choose_by_genre_list()
-            if option == 's':
-                self.choose_by_genre_search()
-            if option == 'r':
-                self.play_random_genre()
-            if self.track:
-                if option == 'n':
-                    self.next()
-                if option == 'p':
-                    self.pause()
-                if option == 'i':
-                    self.info()
-                if option == 'f':
-                    self.favourite()
-
-    def next(self):
-        self.m.stop()
-        self.play()
-
-    def pause(self):
-        if not self.track:
-            self.play()
-            return
-        if self.is_paused:
-            self.is_paused = False
-            self.m.unpause()
-        else:
-            self.is_paused = True
-            self.m.pause()
-
-    def play(self):
-        if self.next_track is not None:
-            self.track = self.next_track
-            self.track_file = self.next_track_file
-            self.next_track = None
-            self.next_track_file = None
-        if self.track is None:
-            self.b.get_next_track()
-            self.track = self.b.track
-            self.track_file = self.get_song_cache_file_name(self.track)
-
-        try:
-            self.m.load(self.track_file)
-            self.m.play()
-            self.is_paused = False
-            self.info()
-        except Exception as e:
-            print(e)
-            self.track = None
-            self.play()
-            return
-
-        if not self.b.get_next_track():
-            print('the end')
-            self.stop()
-        self.next_track = self.b.track
-        self.next_track_file = self.get_song_cache_file_name(self.next_track)
-
         self._play_thread()
 
-    def info(self):
-        print(self.track['track_title'], '|',
-              self.track['artist_name'], '|',
-              self.track['album_title'], '(',
-              self.track['track_duration'], ')<',
-              self.track['track_id'], '>',
-        )
+    def choose_genre(self, genres):
+        enumerated = self.enumerate_genres(genres)
+        for index, genre in enumerated:
+            print(index, genre.genre_title)
+        option = int(input('Choose a genre: '))
+        self.tb.set_genre(enumerated[option][1])
+        self.play()
+
+    def choose_from_parent_genre(self):
+        genres = self.get_parent_genres()
+        self.choose_genre(genres)
+
+    def choose_genre_from_search(self):
+        term = input("I'm feeling lucky: ")
+        genres = self.load_term_genres(term)
+        if not genres:
+            print('no genres found')
+            return
+        self.choose_genre(genres)
+
+    def enumerate_genres(self, genres):
+        genres.sort(key=lambda x: x.genre_title)
+        enumerated = list(enumerate(genres))
+        return enumerated
 
     def favourite(self):
-        favourites_file_path = os.path.join(get_project_dir('favourite'), 'favourites.txt')
+        favourites_file_path = os.path.join(
+            get_project_dir('favourite'), 'favourites.txt'
+        )
         favourites = []
         try:
             favourites_file = open(favourites_file_path, 'r')
@@ -252,58 +193,121 @@ class Player:
             favourites_file.close()
         except FileNotFoundError:
             pass
-        favourites.append(self.track['track_id'])
+        favourites.append(self.track.track_id)
         favourites = set(favourites)
         favourites = '\n'.join(favourites)
         with open(favourites_file_path, 'w') as favourites_file:
             favourites_file.write(favourites)
 
-    def choose_by_genre(self):
-        genres_sorted = self.b.genres()
-        genres_sorted.sort(key=lambda x: x.genre_title)
-        enumerated = list(enumerate(genres_sorted))
-        for index, genre in enumerated:
-            print(index, genre.genre_title)
-        option = int(input('Choose a genre: '))
-        self.b.set_genre(enumerated[option][1])
+    def get_next_track(self):
+        self.current_track_index += 1
+        try:
+            track = self.tracks[self.current_track_index]
+        except IndexError:
+            self.current_track_index -= 1
+            self.load_tracks()
+            return self.get_next_track()
+        return track
 
-    def choose_by_genre_list(self):
-        self._init()
-        self.b.load_parent_genres()
-        self.choose_by_genre()
-        self.play()
+    def get_parent_genres(self):
+        genres = [g for g in self.gb.items if not g.genre_parent_id]
+        return genres
 
-    def choose_by_genre_search(self):
-        self._init()
-        term = input("I'm feeling lucky: ")
-        self.b.load_term_genres(term)
-        if not self.b.genres():
-            print('no genres found')
-            return
-        self.choose_by_genre()
-        self.play()
-
-    def play_random_genre(self):
-        self._init()
-        self.b.load_random_genre()
-        self.play()
-
-    def get_song_cache_file_name(self, track):
+    def get_track_file_name(self, track):
         project_dir = get_project_dir('cache')
-        tmp_track_file_name = os.path.join(project_dir, str(track['track_id'])) + '.mp3'
+        tmp_track_file_name = os.path.join(
+            project_dir, str(track.track_id)
+        ) + '.mp3'
         in_cache = True
         if not os.path.exists(tmp_track_file_name):
             in_cache = False
             with open(tmp_track_file_name, 'wb') as tmp_track:
-                track = self.b._get_content(self.b._get_track_url(track))
-                tmp_track.write(track.content)
+                track = track.get_content(track.get_url(), json=False)
+                tmp_track.write(track)
         print(tmp_track_file_name, ['not', 'in'][in_cache], 'cache')
         return tmp_track_file_name
+
+    def info(self):
+        print(
+            self.track.track_title, '|',
+            self.track.artist_name, '|',
+            self.track.album_title, '(',
+            self.track.track_duration, ')<',
+            self.track.track_id, '>',
+        )
+
+    def load_random_genre(self):
+        self.tb.set_genre(random.choice(self.gb.items))
+
+    def load_term_genres(self, term):
+        genres = []
+        for g in self.gb.genres:
+            if term.lower() in g.genre_title.lower():
+                genres.append(g)
+        return genres
+
+    def load_tracks(self):
+        self.tb.load_next_page()
+        self.tracks = self.tb.items
+
+    def pause(self):
+        if self.is_playing:
+            self.is_playing = False
+            self.m.pause()
+        else:
+            self.is_playing = True
+            self.m.unpause()
+
+    def play(self):
+        if self.tracks is None:
+            self.load_tracks()
+        track = self.get_next_track()
+        track_file_name = self.get_track_file_name(track)
+        try:
+            self.m.load(track_file_name)
+            self.m.play()
+        except pygame.error as e:
+            print(e)
+            self.play()
+
+    def play_random_genre(self):
+        self.load_random_genre()
+        self.play()
+
+    def menu(self):
+        while not self.q:
+            option = input('>> ')
+            if option == 'g':
+                self.choose_from_parent_genre()
+            if option == 'r':
+                self.play_random_genre()
+            if option == 's':
+                self.choose_genre_from_search()
+            if option == 'q':
+                self.stop()
+                continue
+            if self.current_track_index > -1:
+                if option == 'f':
+                    self.favourite()
+                if option == 'i':
+                    self.info()
+                if option == 'n':
+                    self.next()
+                if option == 'p':
+                    self.pause()
+
+    def next(self):
+        self.m.stop()
+        self.play()
 
     def stop(self):
         self.m.stop()
         self.t_stop.set()
         self.q = True
+
+    @property
+    def track(self):
+        return self.tracks[self.current_track_index]
 
     def _play_thread(self):
         class PlayThread(threading.Thread):
@@ -328,4 +332,4 @@ class Player:
 
 if __name__ == '__main__':
     p = Player()
-    p.run()
+    p.menu()
