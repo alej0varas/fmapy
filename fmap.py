@@ -241,7 +241,7 @@ class Player:
 
     def load_term_genres(self, term):
         genres = []
-        for g in self.gb.genres:
+        for g in self.gb.items:
             if term.lower() in g.genre_title.lower():
                 genres.append(g)
         return genres
