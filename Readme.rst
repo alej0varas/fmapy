@@ -18,7 +18,8 @@ Usage
    g - choose gender(parent)
    s - search gender(all)
    n - next
-   f - favourite
+   f - favourite song
+   h - hate song
    p - pause/unpause
    i - info
    q - quit

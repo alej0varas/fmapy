@@ -157,6 +157,12 @@ class Player:
 
         self._play_thread()
 
+    def append_item_by_category(self, item, category):
+        items = self.get_items_by_category(category)
+        items.append(item.track_id)
+        items = set(items)
+        self.store_items_by_category(items, category)
+
     def choose_genre(self, genres):
         enumerated = self.enumerate_genres(genres)
         for index, genre in enumerated:
@@ -183,21 +189,24 @@ class Player:
         return enumerated
 
     def favourite(self):
-        favourites_file_path = os.path.join(
-            get_project_dir('favourite'), 'favourites.txt'
+        self.append_item_by_category(self.track, 'favourites')
+
+    def get_category_file_path(self, category):
+        category_file_path = os.path.join(
+            get_project_dir(category), category + '.txt'
         )
-        favourites = []
+        return category_file_path
+
+    def get_items_by_category(self, category):
+        items_file_path = self.get_category_file_path(category)
+        items = []
         try:
-            favourites_file = open(favourites_file_path, 'r')
-            favourites = [i.strip() for i in favourites_file.readlines()]
-            favourites_file.close()
+            items_file = open(items_file_path, 'r')
+            items = [i.strip() for i in items_file.readlines()]
+            items_file.close()
         except FileNotFoundError:
             pass
-        favourites.append(self.track.track_id)
-        favourites = set(favourites)
-        favourites = '\n'.join(favourites)
-        with open(favourites_file_path, 'w') as favourites_file:
-            favourites_file.write(favourites)
+        return items
 
     def get_next_track(self):
         self.current_track_index += 1
@@ -227,6 +236,9 @@ class Player:
         print(tmp_track_file_name, ['not', 'in'][in_cache], 'cache')
         return tmp_track_file_name
 
+    def hate(self):
+        self.append_item_by_category(self.track, 'hates')
+
     def info(self):
         print(
             self.track.track_title, '|',
@@ -235,6 +247,16 @@ class Player:
             self.track.track_duration, ')<',
             self.track.track_id, '>',
         )
+
+    def is_favourite(self, track):
+        return self.is_item_in_category(track, 'favourites')
+
+    def is_hated(self, track):
+        return self.is_item_in_category(track, 'hates')
+
+    def is_item_in_category(self, item, category):
+        items = self.get_items_by_category(category)
+        return item.track_id in items
 
     def load_random_genre(self):
         self.tb.set_genre(random.choice(self.gb.items))
@@ -262,6 +284,15 @@ class Player:
         if self.tracks is None:
             self.load_tracks()
         track = self.get_next_track()
+        if self.is_hated(track):
+            print('haters gonna hate')
+            self.info()
+            self.next()
+            return
+        if self.is_favourite(track):
+            print('lovers gonna love')
+            self.info()
+
         track_file_name = self.get_track_file_name(track)
         try:
             self.m.load(track_file_name)
@@ -289,6 +320,8 @@ class Player:
             if self.current_track_index > -1:
                 if option == 'f':
                     self.favourite()
+                if option == 'h':
+                    self.hate()
                 if option == 'i':
                     self.info()
                 if option == 'n':
@@ -304,6 +337,12 @@ class Player:
         self.m.stop()
         self.t_stop.set()
         self.q = True
+
+    def store_items_by_category(self, items, category):
+        items_file_path = self.get_category_file_path(category)
+        items = '\n'.join(items)
+        with open(items_file_path, 'w') as items_file:
+            items_file.write(items)
 
     @property
     def track(self):
