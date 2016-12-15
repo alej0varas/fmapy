@@ -75,6 +75,9 @@ class BaseBrowser(Content):
     def get_url(self):
         return self.base_url
 
+    def reset_items(self):
+        self.items = []
+
     def _load_dataset_all(self):
         page = None
         while True:
@@ -133,6 +136,8 @@ class TrackBrowser(BaseBrowser):
         self.pager.__next__()
 
     def set_genre(self, genre):
+        self.reset_items()
+        self.pager = None
         self.genre = genre
 
 
@@ -168,7 +173,7 @@ class Player:
         for index, genre in enumerated:
             print(index, genre.genre_title)
         option = int(input('Choose a genre: '))
-        self.tb.set_genre(enumerated[option][1])
+        self.set_genre(enumerated[option][1])
         self.play()
 
     def choose_from_parent_genre(self):
@@ -259,7 +264,7 @@ class Player:
         return item.track_id in items
 
     def load_random_genre(self):
-        self.tb.set_genre(random.choice(self.gb.items))
+        self.set_genre(random.choice(self.gb.items))
 
     def load_term_genres(self, term):
         genres = []
@@ -332,6 +337,10 @@ class Player:
     def next(self):
         self.m.stop()
         self.play()
+
+    def set_genre(self, genre):
+        self.tracks = None
+        self.tb.set_genre(genre)
 
     def stop(self):
         self.m.stop()
