@@ -22,4 +22,5 @@ Usage
    h - hate song
    p - pause/unpause
    i - info
+   o - toggle play only new/play all( default is to play all)
    q - quit

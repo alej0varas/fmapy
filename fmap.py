@@ -147,8 +147,10 @@ class Player:
     is_playing = True
     tracks = None
     current_track_index = -1
+    only_new = False
 
     def __init__(self):
+        self.settings()
         self.q = False
         self.gb = GenresBrowser()
         self.tb = TrackBrowser()
@@ -227,18 +229,22 @@ class Player:
         genres = [g for g in self.gb.items if not g.genre_parent_id]
         return genres
 
-    def get_track_file_name(self, track):
+    def _get_track_file_name(self, track):
         project_dir = get_project_dir('cache')
         tmp_track_file_name = os.path.join(
             project_dir, str(track.track_id)
         ) + '.mp3'
+        return tmp_track_file_name
+
+    def get_track_file_name(self, track):
         in_cache = True
+        tmp_track_file_name = self._get_track_file_name(track)
         if not os.path.exists(tmp_track_file_name):
             in_cache = False
             with open(tmp_track_file_name, 'wb') as tmp_track:
                 track = track.get_content(track.get_url(), json=False)
                 tmp_track.write(track)
-        print(tmp_track_file_name, ['not', 'in'][in_cache], 'cache')
+        print(tmp_track_file_name, ['not', ''][in_cache], 'in cache')
         return tmp_track_file_name
 
     def hate(self):
@@ -297,6 +303,11 @@ class Player:
         if self.is_favourite(track):
             print('lovers gonna love')
             self.info()
+        if (self.only_new == True) and not self.track_is_new(track):
+            print('skipping not new')
+            self.info()
+            self.next()
+            return
 
         track_file_name = self.get_track_file_name(track)
         try:
@@ -315,6 +326,8 @@ class Player:
             option = input('>> ')
             if option == 'g':
                 self.choose_from_parent_genre()
+            if option == 'o':
+                self.settings(only_new=True)
             if option == 'r':
                 self.play_random_genre()
             if option == 's':
@@ -338,6 +351,10 @@ class Player:
         self.m.stop()
         self.play()
 
+    def settings(self, only_new=False):
+        if only_new:
+            self.only_new = not self.only_new
+
     def set_genre(self, genre):
         self.tracks = None
         self.tb.set_genre(genre)
@@ -352,6 +369,10 @@ class Player:
         items = '\n'.join(items)
         with open(items_file_path, 'w') as items_file:
             items_file.write(items)
+
+    def track_is_new(self, track):
+        tmp_track_file_name = self._get_track_file_name(track)
+        return not os.path.exists(tmp_track_file_name)
 
     @property
     def track(self):
