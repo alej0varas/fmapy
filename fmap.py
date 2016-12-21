@@ -177,6 +177,7 @@ class Player:
             self.is_playing = True
         except pygame.error as e:
             print(e)
+            self.play_callback()
 
     def next(self):
         self.m.stop()
