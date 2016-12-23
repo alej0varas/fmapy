@@ -246,26 +246,6 @@ class BaseUI:
         items = set(items)
         self.store_items_by_category(items, category)
 
-    def choose_genre(self, genres):
-        enumerated = self.enumerate_genres(genres)
-        for index, genre in enumerated:
-            print(index, genre.genre_title)
-        option = int(input('Choose a genre: '))
-        self.set_genre(enumerated[option][1])
-        self.play()
-
-    def play_from_parent_genre(self):
-        genres = self.get_parent_genres()
-        self.choose_genre(genres)
-
-    def play_genre_from_search(self):
-        term = input("I'm feeling lucky: ")
-        genres = self.load_term_genres(term)
-        if not genres:
-            print('no genres found')
-            return
-        self.choose_genre(genres)
-
     def enumerate_genres(self, genres):
         genres.sort(key=lambda x: x.genre_title)
         enumerated = list(enumerate(genres))
@@ -329,7 +309,7 @@ class BaseUI:
     def load_random_genre(self):
         self.set_genre(random.choice(self.gb.items))
 
-    def load_term_genres(self, term):
+    def search_genres(self, term):
         genres = []
         for g in self.gb.items:
             if term.lower() in g.genre_title.lower():
@@ -399,6 +379,20 @@ class BaseUI:
 
 class CLI(BaseUI):
 
+    def choose_genre_from_list(self, genres):
+        enumerated = self.enumerate_genres(genres)
+        for index, genre in enumerated:
+            print(index, genre.genre_title)
+        while True:
+            option = input('Choose a genre: ')
+            try:
+                option = int(option)
+                self.set_genre(enumerated[option][1])
+                break
+            except (ValueError, IndexError):
+                print(':/')
+        self.play()
+
     def menu(self):
         while not self.q:
             self.status()
@@ -429,6 +423,18 @@ class CLI(BaseUI):
                     self.next()
                 if option == 'p':
                     self.pr.pause()
+
+    def play_from_parent_genre(self):
+        genres = self.get_parent_genres()
+        self.choose_genre_from_list(genres)
+
+    def play_genre_from_search(self):
+        term = input("I'm feeling lucky: ")
+        genres = self.search_genres(term)
+        if not genres:
+            print('no genres found')
+            return
+        self.choose_genre_from_list(genres)
 
     def status(self):
         print('status')
