@@ -251,7 +251,7 @@ class BaseUI:
         for index, genre in enumerated:
             print(index, genre.genre_title)
         option = int(input('Choose a genre: '))
-        self.tb.set_genre(enumerated[option][1])
+        self.set_genre(enumerated[option][1])
         self.play()
 
     def play_from_parent_genre(self):
@@ -327,7 +327,7 @@ class BaseUI:
         return item.track_id in items
 
     def load_random_genre(self):
-        self.tb.set_genre(random.choice(self.gb.items))
+        self.set_genre(random.choice(self.gb.items))
 
     def load_term_genres(self, term):
         genres = []
@@ -369,6 +369,11 @@ class BaseUI:
 
     def next(self):
         self.play()
+
+    def set_genre(self, genre):
+        self.tb.set_genre(genre)
+        self.pl = PlayList()
+        self.load_tracks()
 
     def settings(self, only_new=False):
         if only_new:
