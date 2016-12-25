@@ -151,8 +151,8 @@ class Player:
     is_playing = False
     t = None
 
-    def __init__(self, play_callback):
-        self.play_callback = play_callback
+    def __init__(self, song_ended_callback, play_failed_callback):
+        self.song_ended_callback = song_ended_callback
         pygame.init()
         self.m = pygame.mixer.music
         self.t_stop = threading.Event()
@@ -177,7 +177,7 @@ class Player:
             self.is_playing = True
         except pygame.error as e:
             print(e)
-            self.play_callback()
+            self.play_failed_callback()
 
     def next(self):
         self.m.stop()
@@ -202,7 +202,7 @@ class Player:
                 while not self.p.t_stop.is_set():
                     for event in pygame.event.get():
                         if event.type == self.p.SONG_END:
-                            self.p.play_callback()
+                            self.p.song_ended_callback()
                     self.p.t_stop.wait(.5)
 
         self.t = PlayThread(kwargs={'p': self})
@@ -238,7 +238,7 @@ class BaseUI:
         self.tb = TrackBrowser()
         self.gb = GenresBrowser()
         self.pl = PlayList()
-        self.pr = Player(self.play)
+        self.pr = Player(self.song_ended, self.play_failed)
 
     def append_item_by_category(self, item, category):
         items = self.get_items_by_category(category)
@@ -316,6 +316,9 @@ class BaseUI:
                 genres.append(g)
         return genres
 
+    def song_ended(self):
+        self.append_item_by_category(self.track, 'endeds')
+
     def load_tracks(self):
         try:
             self.tb.load_next_page()
@@ -343,11 +346,16 @@ class BaseUI:
         track_file_name = self.get_track_file_name(self.track)
         self.pr.play(track_file_name)
 
+    def play_failed(self):
+        self.append_item_by_category(self.track, 'failed')
+        self.play()
+
     def play_random_genre(self):
         self.load_random_genre()
         self.play()
 
     def next(self):
+        self.append_item_by_category(self.track, 'skipped')
         self.play()
 
     def set_genre(self, genre):
