@@ -241,10 +241,11 @@ class BaseUI:
         self.pl = PlayList()
         self.pr = Player(self.song_ended, self.play_failed)
 
-    def append_item_by_category(self, item, category):
+    def append_item_by_category(self, item, category, repeat=False):
         items = self.get_items_by_category(category)
         items.append(item.track_id)
-        items = set(items)
+        if not repeat:
+            items = set(items)
         self.store_items_by_category(items, category)
 
     def enumerate_genres(self, genres):
@@ -318,7 +319,7 @@ class BaseUI:
         return genres
 
     def song_ended(self):
-        self.append_item_by_category(self.track, 'endeds')
+        self.append_item_by_category(self.track, 'endeds', repeat=True)
         self.play()
 
     def load_tracks(self):
@@ -349,7 +350,7 @@ class BaseUI:
         self.pr.play(track_file_name)
 
     def play_failed(self):
-        self.append_item_by_category(self.track, 'failed')
+        self.append_item_by_category(self.track, 'failed', repeat=True)
         self.play()
 
     def play_random_genre(self):
@@ -357,7 +358,7 @@ class BaseUI:
         self.play()
 
     def next(self):
-        self.append_item_by_category(self.track, 'skipped')
+        self.append_item_by_category(self.track, 'skipped', repeat=True)
         self.play()
 
     def set_genre(self, genre):
