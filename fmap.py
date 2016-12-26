@@ -318,6 +318,7 @@ class BaseUI:
 
     def song_ended(self):
         self.append_item_by_category(self.track, 'endeds')
+        self.play()
 
     def load_tracks(self):
         try:
