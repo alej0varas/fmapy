@@ -153,6 +153,7 @@ class Player:
 
     def __init__(self, song_ended_callback, play_failed_callback):
         self.song_ended_callback = song_ended_callback
+        self.play_failed_callback = play_failed_callback
         pygame.init()
         self.m = pygame.mixer.music
         self.t_stop = threading.Event()
