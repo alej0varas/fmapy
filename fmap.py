@@ -348,6 +348,10 @@ class BaseUI:
             print('skipping not new')
             self.next()
             return
+        if self._settings['only_instrumental'] and not int(self.track.track_instrumental):
+            print('skipping not instrumental')
+            self.next()
+            return
 
         track_file_name = self.get_track_file_name(self.track)
         self.pr.play(track_file_name)
