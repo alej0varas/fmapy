@@ -230,7 +230,10 @@ class PlayList:
 class BaseUI:
 
     track = None
-    only_new = False
+    _settings = {
+        'only_new': False,
+        'only_instrumental': False
+    }
 
     def __init__(self):
         self.settings()
@@ -341,7 +344,7 @@ class BaseUI:
             print('haters gonna hate')
             self.next()
             return
-        if (self.only_new == True) and not self.track_is_new(self.track):
+        if self._settings['only_new'] and not self.track_is_new(self.track):
             print('skipping not new')
             self.next()
             return
@@ -366,9 +369,8 @@ class BaseUI:
         self.pl = PlayList()
         self.load_tracks()
 
-    def settings(self, only_new=False):
-        if only_new:
-            self.only_new = not self.only_new
+    def settings(self, **kwargs):
+        self._settings.update(**kwargs)
 
     def stop(self):
         self.pr.stop()
@@ -421,7 +423,7 @@ class CLI(BaseUI):
             if option == 'a':
                 self.play()
             if option == 'i':
-                self.status()
+                self.settings(only_instrumental=True)
             if option == 'q':
                 self.quit()
                 continue
@@ -451,7 +453,7 @@ class CLI(BaseUI):
         print('status')
         print('is playing', self.pr.is_playing)
         print('is busy', self.pr.m.get_busy())
-        print('only new', self.only_new)
+        print(self._settings)
         try:
             print(' genre', self.tb.genre.genre_title, self.tb.genre.genre_id)
             print(' track', self.track.track_title, self.track.track_id, self.track.track_duration)
