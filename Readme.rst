@@ -7,9 +7,22 @@ THANKS to http://freemusicarchive.org/ for the music!
 Only tested on ubuntu 15.10 XD
 Requires libsmpeg0: apt install libsmpeg0
 
+Run
+===
+
+You need Python3.
+Install the requirements and run.
+::
+
+   $ pip install -r requirements.txt
+
 ::
 
    $ FMA_API_KEY=<YOUR FMA KEY> python3 fmap.py
+
+
+Get your key from https://freemusicarchive.org/api/agreement (yes, you need an account in FMA) or you can **test** with the key you can find here https://freemusicarchive.org/api/
+
 
 Usage
 ::
