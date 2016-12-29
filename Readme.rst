@@ -34,6 +34,6 @@ Usage
    f - favourite song
    h - hate song
    p - pause/unpause
-   i - info
-   o - toggle play only new/play all( default is to play all)
+   i - toggle: play all/new (default is to play all)
+   o - toggle: all/instrumental (default is to play all)
    q - quit

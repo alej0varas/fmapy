@@ -417,7 +417,7 @@ class CLI(BaseUI):
             if option == 'g':
                 self.play_from_parent_genre()
             if option == 'o':
-                self.settings(only_new=True)
+                self.settings(only_new=not self._settings['only_new'])
             if option == 'r':
                 self.play_random_genre()
             if option == 's':
@@ -427,7 +427,7 @@ class CLI(BaseUI):
             if option == 'a':
                 self.play()
             if option == 'i':
-                self.settings(only_instrumental=True)
+                self.settings(only_instrumental=not self._settings['only_instrumental'])
             if option == 'q':
                 self.quit()
                 continue
