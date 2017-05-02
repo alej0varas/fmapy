@@ -68,6 +68,7 @@ class BaseBrowser(Content):
         self.base_url = FMA_API_URL.format(
             self.dataset_name, FMA_API_FORMAT, FMA_API_KEY
         )
+        self.dataset_class = get_dataset_item_class(self.dataset_name)
 
     def load_dataset_all(self):
         [i for i in self._load_dataset_all()]
@@ -105,7 +106,7 @@ class BaseBrowser(Content):
 
     def _set_items(self, dataset):
         for item in dataset:
-            i = get_dataset_item_class(self.dataset_name)()
+            i = self.dataset_class()
             i.__dict__.update(item)
             self.items.append(i)
 
@@ -301,6 +302,9 @@ class BaseUI:
     def hate(self):
         self.append_item_by_category(self.track, 'hates')
 
+    def is_busy(self):
+        return self.pr.is_busy()
+
     def is_favourite(self, track):
         return self.is_item_in_category(track, 'favourites')
 
@@ -332,6 +336,9 @@ class BaseUI:
             return True
         except StopIteration:
             return False
+
+    def pause(self):
+        self.pr.pause()
 
     def play(self):
         self.track = self.pl.get_track()
@@ -431,7 +438,7 @@ class CLI(BaseUI):
             if option == 'q':
                 self.quit()
                 continue
-            if self.pr.is_busy():
+            if self.is_busy():
                 if option == 'f':
                     self.favourite()
                 if option == 'h':
@@ -439,7 +446,7 @@ class CLI(BaseUI):
                 if option == 'n':
                     self.next()
                 if option == 'p':
-                    self.pr.pause()
+                    self.pause()
 
     def play_from_parent_genre(self):
         genres = self.get_parent_genres()
