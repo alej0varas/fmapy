@@ -8,7 +8,7 @@ class BaseUI:
     def __init__(self):
         self._quit = False
 
-        self.player = fmap.Player(self.song_ended, self.play_failed)
+        self.player = fmap.Player(self.song_ended, self.play_failed, self.check_if_playable_callback)
 
     def append_item_by_category(self, item, category, repeat=False):
         items = self.get_items_by_category(category)
@@ -60,25 +60,24 @@ class BaseUI:
     def pause(self):
         self.player.pause()
 
-    def play(self):
-        track = self.player.get_current_track()
+    def check_if_playable_callback(self, track):
         if self.is_hated(track):
             print('haters gonna hate')
-            self.next()
-            return
+            return False
         if self.player.get_settings()['only_new'] and not self.track_is_new(track):
             print('skipping not new')
-            self.next()
-            return
+            return False
         if self.player.get_settings()['only_instrumental'] and not int(track.track_instrumental):
             print('skipping not instrumental')
-            self.next()
-            return
+            return False
+        return True
+
+    def play(self):
         self.player.play_current_track()
 
     def play_failed(self):
         self.append_item_by_category(self.player.track, 'failed', repeat=True)
-        self.next()
+        self.player.play_next_track()
 
     def next(self):
         self.append_item_by_category(self.player.track, 'skipped', repeat=True)

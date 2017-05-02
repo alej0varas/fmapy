@@ -202,13 +202,14 @@ class Player:
         'only_instrumental': False
     }
 
-    def __init__(self, track_ended_callback, play_failed_callback):
+    def __init__(self, track_ended_callback, play_failed_callback, is_playable_callback):
         self.track_browser = TrackBrowser()
         self.genres_browser = GenresBrowser()
         self.play_list = PlayList(self.track_browser)
 
         self.track_ended_callback = track_ended_callback
         self.play_failed_callback = play_failed_callback
+        self.is_playable_callback = is_playable_callback
         pygame.init()
         self.mixer = pygame.mixer.music
         self.t_stop = threading.Event()
@@ -234,6 +235,8 @@ class Player:
         self._play = True
 
     def do_play(self):
+        if not self.is_playable_callback(self.track):
+            self.next()
         try:
             self.mixer.load(self.get_track_file_name(self.track))
             self.mixer.play()
@@ -247,6 +250,7 @@ class Player:
 
     def do_next(self):
         self.mixer.stop()
+        self.is_playing = False
         self.play_next_track()
 
     def stop(self):
