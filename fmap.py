@@ -58,6 +58,9 @@ class Track(Content):
 
 class BaseBrowser(Content):
 
+    total_pages = None
+    total = None
+
     def __init__(self, use_cache=True):
         self.items = []
         self.base_url = FMA_API_URL.format(
@@ -82,6 +85,10 @@ class BaseBrowser(Content):
     def reset_items(self):
         self.items = []
 
+    def check_totals(self, data):
+        self.total_pages = data.get('total_pages', None)
+        self.tolal = data.get('total_pages', None)
+
     def _load_dataset_all(self):
         page = None
         while True:
@@ -89,20 +96,24 @@ class BaseBrowser(Content):
             if dataset is None:
                 break
             self._set_items(dataset)
-            page = str(int(page) + 1)
+            page += 1
             yield
 
     def _load_dataset_page(self, page=None):
+        if self.total_pages is not None and page is not None and self.total_pages < page:
+            return None, None
         url = self.get_url()
         if page is not None:
-            url += '&page=' + page
+            url += '&page=' + str(page)
         url += '&limit=' + str(FMA_API_ITEMS_LIMIT)
 
         data = self.get_content(url)
 
-        if page is not None and int(data['page']) < int(page):
+        self.check_totals(data)
+
+        if page is not None and int(data['page']) < page:
             return None, None
-        return data['dataset'], data['page']
+        return data['dataset'], int(data['page'])
 
     def _set_items(self, dataset):
         for item in dataset:
