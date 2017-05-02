@@ -1,5 +1,4 @@
 import os
-import random
 import requests
 import requests_cache
 import threading
@@ -147,139 +146,122 @@ class TrackBrowser(BaseBrowser):
         self.genre = genre
 
 
+class PlayList:
+
+    def __init__(self, track_browser):
+        self.track_browser = track_browser
+        self.reset()
+
+    def set_tracks(self, tracks):
+        self.tracks = tracks
+
+    def get_next_track(self):
+        self.current_track_index += 1
+        return self.get_current_track()
+
+    def get_current_track(self):
+        return self.get_track(self.current_track_index)
+
+    def get_track(self, index):
+        try:
+            track = self.tracks[index]
+            return track
+        except IndexError as e:
+            result = self.load_tracks()
+            if result:
+                track = self.get_track(index)
+                return track
+            raise e
+
+    def load_tracks(self):
+        try:
+            self.track_browser.load_next_page()
+            self.set_tracks(self.track_browser.items)
+            return True
+        except StopIteration:
+            return False
+
+    def reset(self, load=False):
+        self.tracks = []
+        self.current_track_index = 0
+        if load:
+            self.load_tracks()
+
+
 class Player:
 
+    track = None
+    _play = None
+    _pause = None
+    _next = None
+    _stop = None
     is_playing = False
-    t = None
+    _settings = {
+        'only_new': False,
+        'only_instrumental': False
+    }
 
-    def __init__(self, song_ended_callback, play_failed_callback):
-        self.song_ended_callback = song_ended_callback
+    def __init__(self, track_ended_callback, play_failed_callback):
+        self.track_browser = TrackBrowser()
+        self.genres_browser = GenresBrowser()
+        self.play_list = PlayList(self.track_browser)
+
+        self.track_ended_callback = track_ended_callback
         self.play_failed_callback = play_failed_callback
         pygame.init()
-        self.m = pygame.mixer.music
+        self.mixer = pygame.mixer.music
         self.t_stop = threading.Event()
 
-        self.SONG_END = pygame.USEREVENT + 1
-        pygame.mixer.music.set_endevent(self.SONG_END)
+        self.TRACK_END = pygame.USEREVENT + 1
+        pygame.mixer.music.set_endevent(self.TRACK_END)
 
-        self._play_thread()
+        self._start_auto_play()
 
     def pause(self):
+        self._pause = True
+
+    def do_pause(self):
         if self.is_playing:
             self.is_playing = False
-            self.m.pause()
+            self.mixer.pause()
         else:
             self.is_playing = True
-            self.m.unpause()
+            self.mixer.unpause()
 
-    def play(self, track_file_name):
+    def play(self, track):
+        self.track = track
+        self._play = True
+
+    def do_play(self):
         try:
-            self.m.load(track_file_name)
-            self.m.play()
+            self.mixer.load(self.get_track_file_name(self.track))
+            self.mixer.play()
             self.is_playing = True
         except pygame.error as e:
             print(e)
             self.play_failed_callback()
 
     def next(self):
-        self.m.stop()
-        self.play()
+        self._next = True
+
+    def do_next(self):
+        self.mixer.stop()
+        self.play_next_track()
 
     def stop(self):
-        self.m.stop()
+        self._stop = True
+
+    def do_stop(self):
+        self.mixer.stop()
         self.t_stop.set()
-
-    def is_busy(self):
-        return self.m.get_busy()
-
-    def _play_thread(self):
-
-        class PlayThread(threading.Thread):
-
-            def __init__(self, *args, **kwargs):
-                self.p = kwargs['kwargs']['p']
-                super(PlayThread, self).__init__(*args, **kwargs)
-
-            def run(self):
-                while not self.p.t_stop.is_set():
-                    for event in pygame.event.get():
-                        if event.type == self.p.SONG_END:
-                            self.p.song_ended_callback()
-                    self.p.t_stop.wait(.5)
-
-        self.t = PlayThread(kwargs={'p': self})
-        self.t.start()
-
-
-class PlayList:
-
-    tracks = []
-    current_track_index = 0
-
-    def set_tracks(self, tracks):
-        self.tracks = tracks
-
-    def get_track(self):
-        try:
-            track = self.tracks[self.current_track_index]
-            self.current_track_index += 1
-            return track
-        except IndexError:
-            return None
-
-
-class BaseUI:
-
-    track = None
-    _settings = {
-        'only_new': False,
-        'only_instrumental': False
-    }
-
-    def __init__(self):
-        self.settings()
-        self.q = False
-
-        self.tb = TrackBrowser()
-        self.gb = GenresBrowser()
-        self.pl = PlayList()
-        self.pr = Player(self.song_ended, self.play_failed)
-
-    def append_item_by_category(self, item, category, repeat=False):
-        items = self.get_items_by_category(category)
-        items.append(item.track_id)
-        if not repeat:
-            items = set(items)
-        self.store_items_by_category(items, category)
 
     def enumerate_genres(self, genres):
         genres.sort(key=lambda x: x.genre_title)
         enumerated = list(enumerate(genres))
         return enumerated
 
-    def favourite(self):
-        self.append_item_by_category(self.track, 'favourites')
-
-    def get_category_file_path(self, category):
-        category_file_path = os.path.join(
-            get_project_dir(category), category + '.txt'
-        )
-        return category_file_path
-
-    def get_items_by_category(self, category):
-        items_file_path = self.get_category_file_path(category)
-        items = []
-        try:
-            items_file = open(items_file_path, 'r')
-            items = [i.strip() for i in items_file.readlines()]
-            items_file.close()
-        except FileNotFoundError:
-            pass
-        return items
-
-    def get_parent_genres(self):
-        genres = [g for g in self.gb.items if not g.genre_parent_id]
-        return genres
+    def get_current_track(self):
+        return self.play_list.get_current_track()
 
     def _get_track_file_name(self, track):
         project_dir = get_project_dir('cache')
@@ -299,179 +281,73 @@ class BaseUI:
         print(tmp_track_file_name, ['not', ''][in_cache], 'in cache')
         return tmp_track_file_name
 
-    def hate(self):
-        self.append_item_by_category(self.track, 'hates')
+    def get_parent_genres(self):
+        genres = [g for g in self.genres_browser.items if not g.genre_parent_id]
+        return genres
 
-    def is_busy(self):
-        return self.pr.is_busy()
-
-    def is_favourite(self, track):
-        return self.is_item_in_category(track, 'favourites')
-
-    def is_hated(self, track):
-        return self.is_item_in_category(track, 'hates')
-
-    def is_item_in_category(self, item, category):
-        items = self.get_items_by_category(category)
-        return item.track_id in items
+    def get_settings(self):
+        return self._settings
 
     def load_random_genre(self):
-        self.set_genre(random.choice(self.gb.items))
+        self.set_genre(random.choice(self.genres_browser.items))
 
     def search_genres(self, term):
         genres = []
-        for g in self.gb.items:
+        for g in self.genres_browser.items:
             if term.lower() in g.genre_title.lower():
                 genres.append(g)
         return genres
 
-    def song_ended(self):
-        self.append_item_by_category(self.track, 'endeds', repeat=True)
-        self.play()
-
-    def load_tracks(self):
-        try:
-            self.tb.load_next_page()
-            self.pl.set_tracks(self.tb.items)
-            return True
-        except StopIteration:
-            return False
-
-    def pause(self):
-        self.pr.pause()
-
-    def play(self):
-        self.track = self.pl.get_track()
-        if self.track is None:
-            result = self.load_tracks()
-            if result:
-                self.play()
-            return
-        if self.is_hated(self.track):
-            print('haters gonna hate')
-            self.next()
-            return
-        if self._settings['only_new'] and not self.track_is_new(self.track):
-            print('skipping not new')
-            self.next()
-            return
-        if self._settings['only_instrumental'] and not int(self.track.track_instrumental):
-            print('skipping not instrumental')
-            self.next()
-            return
-
-        track_file_name = self.get_track_file_name(self.track)
-        self.pr.play(track_file_name)
-
-    def play_failed(self):
-        self.append_item_by_category(self.track, 'failed', repeat=True)
-        self.play()
-
     def play_random_genre(self):
         self.load_random_genre()
-        self.play()
+        self.play_current_track()
 
-    def next(self):
-        self.append_item_by_category(self.track, 'skipped', repeat=True)
-        self.play()
+    def is_busy(self):
+        return self.mixer.get_busy()
+
+    def play_current_track(self):
+        track = self.play_list.get_current_track()
+        self.play(track)
+
+    def play_next_track(self):
+        track = self.play_list.get_next_track()
+        self.play(track)
 
     def set_genre(self, genre):
-        self.tb.set_genre(genre)
-        self.pl = PlayList()
-        self.load_tracks()
+        self.track_browser.set_genre(genre)
+        self.play_list.reset(load=False)
 
     def settings(self, **kwargs):
         self._settings.update(**kwargs)
 
-    def stop(self):
-        self.pr.stop()
-
-    def store_items_by_category(self, items, category):
-        items_file_path = self.get_category_file_path(category)
-        items = '\n'.join(items)
-        with open(items_file_path, 'w') as items_file:
-            items_file.write(items)
-
-    def track_is_new(self, track):
-        tmp_track_file_name = self._get_track_file_name(track)
-        return not os.path.exists(tmp_track_file_name)
-
-    def quit(self):
-        self.stop()
-        self.q = True
+    def _start_auto_play(self):
+        self._auto_play_thread = AutoPlayThread(kwargs={'player': self})
+        self._auto_play_thread.start()
 
 
-class CLI(BaseUI):
+class AutoPlayThread(threading.Thread):
 
-    def choose_genre_from_list(self, genres):
-        enumerated = self.enumerate_genres(genres)
-        for index, genre in enumerated:
-            print(index, genre.genre_title)
-        while True:
-            option = input('Choose a genre: ')
-            try:
-                option = int(option)
-                self.set_genre(enumerated[option][1])
-                break
-            except (ValueError, IndexError):
-                print(':/')
-        self.play()
+    def __init__(self, *args, **kwargs):
+        self.player = kwargs['kwargs']['player']
+        super(AutoPlayThread, self).__init__(*args, **kwargs)
 
-    def menu(self):
-        while not self.q:
-            self.status()
-            option = input('>> ')
-            if option == 'g':
-                self.play_from_parent_genre()
-            if option == 'o':
-                self.settings(only_new=not self._settings['only_new'])
-            if option == 'r':
-                self.play_random_genre()
-            if option == 's':
-                self.play_genre_from_search()
-            if option == 't':
-                self.stop()
-            if option == 'a':
-                self.play()
-            if option == 'i':
-                self.settings(only_instrumental=not self._settings['only_instrumental'])
-            if option == 'q':
-                self.quit()
-                continue
-            if self.is_busy():
-                if option == 'f':
-                    self.favourite()
-                if option == 'h':
-                    self.hate()
-                if option == 'n':
-                    self.next()
-                if option == 'p':
-                    self.pause()
+    def run(self):
+        while not self.player.t_stop.is_set():
+            for event in pygame.event.get():
+                if event.type == self.player.TRACK_END:
+                    self.player.next()
+            if self.player._pause:
+                self.player._pause = False
+                self.player.do_pause()
+            if self.player._play:
+                self.player._play = False
+                self.player.do_play()
+            if self.player._next:
+                self.player._next = False
+                self.player.do_next()
+            if self.player._stop:
+                self.player._stop = False
+                self.player.do_stop()
 
-    def play_from_parent_genre(self):
-        genres = self.get_parent_genres()
-        self.choose_genre_from_list(genres)
+            self.player.t_stop.wait(.1)
 
-    def play_genre_from_search(self):
-        term = input("I'm feeling lucky: ")
-        genres = self.search_genres(term)
-        if not genres:
-            print('no genres found')
-            return
-        self.choose_genre_from_list(genres)
-
-    def status(self):
-        print('status')
-        print('is playing', self.pr.is_playing)
-        print('is busy', self.pr.m.get_busy())
-        print(self._settings)
-        try:
-            print(' genre', self.tb.genre.genre_title, self.tb.genre.genre_id)
-            print(' track', self.track.track_title, self.track.track_id, self.track.track_duration)
-        except:
-            pass
-
-
-if __name__ == '__main__':
-    cli = CLI()
-    cli.menu()
