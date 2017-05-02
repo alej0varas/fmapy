@@ -1,4 +1,5 @@
 import os
+import random
 import requests
 import requests_cache
 import threading
@@ -23,11 +24,6 @@ def get_project_dir(subdir=''):
     if not os.path.exists(project_dir):
         os.makedirs(project_dir)
     return project_dir
-
-
-requests_cache.install_cache(
-    os.path.join(get_project_dir('cache'), 'requests_cache')
-)  # :)
 
 
 def get_dataset_item_class(dataset_name):
@@ -62,12 +58,17 @@ class Track(Content):
 
 class BaseBrowser(Content):
 
-    def __init__(self):
+    def __init__(self, use_cache=True):
         self.items = []
         self.base_url = FMA_API_URL.format(
             self.dataset_name, FMA_API_FORMAT, FMA_API_KEY
         )
         self.dataset_class = get_dataset_item_class(self.dataset_name)
+
+        if use_cache:
+            requests_cache.install_cache(
+                os.path.join(get_project_dir('cache'), 'requests_cache')
+            )
 
     def load_dataset_all(self):
         [i for i in self._load_dataset_all()]
