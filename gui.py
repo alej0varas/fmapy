@@ -18,8 +18,8 @@ class GUI(baseui.BaseUI):
 
         grid = Grid()
         button_play = Button('play', self.player.play_current_track)
-        button_next = Button('next', self.player.play_next_track)
         grid.add(button_play)
+        button_next = Button('next', self.player.play_next_track)
         grid.add(button_next)
 
         while 1:
@@ -50,23 +50,29 @@ class Button:
 
 class Grid:
     elements = []
-    width = 2
-    height = 2
     current_x = 0
     current_y = 0
-    size_x = 100
-    size_y = 100
+
+    def __init__(self, width=2, height=2, size_x=100, size_y=100):
+        self.width = width
+        self.height = height
+        self.size_x = size_x
+        self.size_y = size_y
 
     def add(self, element):
         element.position = self.get_next_position()
         self.elements.append(element)
 
     def get_next_position(self):
+        if self.current_y == self.height:
+            return None
+
         position = self.current_x * self.size_x, self.current_y * self.size_y
         self.current_x += 1
         if self.current_x == self.width:
             self.current_x = 0
             self.current_y += 1
+
         return position
 
 def load_image(name, directory='images'):
