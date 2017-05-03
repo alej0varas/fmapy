@@ -6,6 +6,8 @@ import threading
 
 import pygame
 
+pygame.init()
+
 
 FMA_API_URL = 'https://freemusicarchive.org/api/get/{0}.{1}?api_key={2}'
 FMA_API_KEY = os.environ.get('FMA_API_KEY')
@@ -221,14 +223,13 @@ class Player:
         self.track_ended_callback = track_ended_callback
         self.play_failed_callback = play_failed_callback
         self.is_playable_callback = is_playable_callback
-        pygame.init()
         self.mixer = pygame.mixer.music
-        self.t_stop = threading.Event()
+        # self.t_stop = threading.Event()
 
-        self.TRACK_END = pygame.USEREVENT + 1
-        pygame.mixer.music.set_endevent(self.TRACK_END)
+        # self.TRACK_END = pygame.USEREVENT + 1
+        # pygame.mixer.music.set_endevent(self.TRACK_END)
 
-        self._start_auto_play()
+        # self._start_auto_play()
 
     def pause(self):
         self._pause = True
@@ -244,6 +245,7 @@ class Player:
     def play(self, track):
         self.track = track
         self._play = True
+        self.do_play()
 
     def do_play(self):
         if not self.is_playable_callback(self.track):
@@ -258,6 +260,7 @@ class Player:
 
     def next(self):
         self._next = True
+        self.do_next()
 
     def do_next(self):
         self.mixer.stop()
@@ -336,34 +339,34 @@ class Player:
     def settings(self, **kwargs):
         self._settings.update(**kwargs)
 
-    def _start_auto_play(self):
-        self._auto_play_thread = AutoPlayThread(kwargs={'player': self})
-        self._auto_play_thread.start()
+    # def _start_auto_play(self):
+    #     self._auto_play_thread = AutoPlayThread(kwargs={'player': self})
+    #     self._auto_play_thread.start()
 
 
-class AutoPlayThread(threading.Thread):
+# class AutoPlayThread(threading.Thread):
 
-    def __init__(self, *args, **kwargs):
-        self.player = kwargs['kwargs']['player']
-        super(AutoPlayThread, self).__init__(*args, **kwargs)
+#     def __init__(self, *args, **kwargs):
+#         self.player = kwargs['kwargs']['player']
+#         super(AutoPlayThread, self).__init__(*args, **kwargs)
 
-    def run(self):
-        while not self.player.t_stop.is_set():
-            for event in pygame.event.get():
-                if event.type == self.player.TRACK_END:
-                    self.player.next()
-            if self.player._pause:
-                self.player._pause = False
-                self.player.do_pause()
-            if self.player._play:
-                self.player._play = False
-                self.player.do_play()
-            if self.player._next:
-                self.player._next = False
-                self.player.do_next()
-            if self.player._stop:
-                self.player._stop = False
-                self.player.do_stop()
+#     def run(self):
+#         while not self.player.t_stop.is_set():
+#             for event in pygame.event.get():
+#                 if event.type == self.player.TRACK_END:
+#                     self.player.next()
+#             if self.player._pause:
+#                 self.player._pause = False
+#                 self.player.do_pause()
+#             if self.player._play:
+#                 self.player._play = False
+#                 self.player.do_play()
+#             if self.player._next:
+#                 self.player._next = False
+#                 self.player.do_next()
+#             if self.player._stop:
+#                 self.player._stop = False
+#                 self.player.do_stop()
 
-            self.player.t_stop.wait(.1)
+#             self.player.t_stop.wait(.1)
 
