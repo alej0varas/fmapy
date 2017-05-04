@@ -269,10 +269,11 @@ class Player:
 
     def stop(self):
         self._stop = True
+        self.do_stop()
 
     def do_stop(self):
         self.mixer.stop()
-        self.t_stop.set()
+        # self.t_stop.set()
 
     def enumerate_genres(self, genres):
         genres.sort(key=lambda x: x.genre_title)
