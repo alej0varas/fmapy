@@ -48,7 +48,7 @@ class CLI(baseui.BaseUI):
                     self.pause()
 
     def play_genre_from_parents(self):
-        genres = self.get_parent_genres()
+        genres = self.player.get_parent_genres()
         self.choose_genre_from_list(genres)
         self.play()
 
