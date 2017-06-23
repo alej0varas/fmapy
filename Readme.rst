@@ -18,10 +18,10 @@ Install the requirements and run.
 
 ::
 
-   $ FMA_API_KEY=<YOUR FMA KEY> python3 fmap.py
+   $ FMA_API_KEY=<YOUR FMA KEY> python3 cli.py
 
 
-Get your key from https://freemusicarchive.org/api/agreement (yes, you need an account in FMA) or you can **test** with the key you can find here https://freemusicarchive.org/api/
+Get your key from https://freemusicarchive.org/api/agreement (yes, you need an account in FMA).
 
 
 Usage
