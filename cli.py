@@ -34,6 +34,8 @@ class CLI(baseui.BaseUI):
                 self.play()
             if option == 'i':
                 self.player.settings(only_instrumental=not self.player.get_settings()['only_instrumental'])
+            if option == '?':
+                self.print_help()
             if option == 'q':
                 self.quit()
                 break
@@ -71,6 +73,21 @@ class CLI(baseui.BaseUI):
             print(' track', self.player.track.track_title, self.player.track.track_id, self.player.track.track_duration)
         except:
             pass
+
+    def print_help(self):
+        print('g - play genre from parents')
+        print('o - settings: play only new songs')
+        print('r - play random genre')
+        print('s - search genre')
+        print('t - stop playing')
+        print('a - play')
+        print('i - settings: play only instrumental')
+        print('? - show help')
+        print('q - quit')
+        print('f - mark song as favourite')
+        print('h - mark song as hated')
+        print('n - play next song')
+        print('p - pause')
 
 
 if __name__ == '__main__':
