@@ -1,9 +1,12 @@
+import logging
+
 import baseui
 
 
 class CLI(baseui.BaseUI):
 
     def choose_genre_from_list(self, genres):
+        logging.debug('CLI.choose_genre_from_list')
         enumerated = self.player.enumerate_genres(genres)
         for index, genre in enumerated:
             print(index, genre.genre_title)
@@ -17,8 +20,8 @@ class CLI(baseui.BaseUI):
                 print(':/')
 
     def menu(self):
+        logging.debug('CLI.menu')
         while True:
-            self.status()
             option = input('>> ')
             if option == 'g':
                 self.play_genre_from_parents()
@@ -48,13 +51,17 @@ class CLI(baseui.BaseUI):
                     self.next()
                 if option == 'p':
                     self.pause()
+            if option == '':
+                self.status()
 
     def play_genre_from_parents(self):
+        logging.debug('CLI.play_genre_from_parents')
         genres = self.player.get_parent_genres()
         self.choose_genre_from_list(genres)
         self.play()
 
     def play_genre_from_search(self):
+        logging.debug('CLI.play_genre_from_search')
         term = input("I'm feeling lucky: ")
         genres = self.player.search_genres(term)
         if not genres:
@@ -64,17 +71,19 @@ class CLI(baseui.BaseUI):
         self.play()
 
     def status(self):
-        print('status')
-        print('is playing', self.player.is_playing)
-        print('is busy', self.player.mixer.get_busy())
-        print(self.player.get_settings())
+        logging.debug('CLI.status')
+        logging.debug('is playing ' + str(self.player.is_playing))
+        logging.debug('is busy ' + str(self.player.mixer.get_busy()))
+        logging.debug(str(self.player.get_settings()))
+        print('Settings', self.player.get_settings())
         try:
-            print(' genre', self.player.track_browser.genre.genre_title, self.player.track_browser.genre.genre_id)
-            print(' track', self.player.track.track_title, self.player.track.track_id, self.player.track.track_duration)
+            print(' Playing:', self.player.track.track_title, self.player.track.track_id, self.player.get_pos(), self.player.track.track_duration)
+            print(' Genre:', self.player.track_browser.genre.genre_title, self.player.track_browser.genre.genre_id)
         except:
             pass
 
     def print_help(self):
+        logging.debug('CLI.print_help')
         print('g - play genre from parents')
         print('o - settings: play only new songs')
         print('r - play random genre')

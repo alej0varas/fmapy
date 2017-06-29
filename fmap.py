@@ -245,12 +245,12 @@ class Player:
         self.play_failed_callback = play_failed_callback
         self.is_playable_callback = is_playable_callback
         self.mixer = pygame.mixer.music
-        # self.t_stop = threading.Event()
+        self.t_stop = threading.Event()
 
-        # self.TRACK_END = pygame.USEREVENT + 1
-        # pygame.mixer.music.set_endevent(self.TRACK_END)
+        self.TRACK_END = pygame.USEREVENT + 1
+        pygame.mixer.music.set_endevent(self.TRACK_END)
 
-        # self._start_auto_play()
+        self._start_auto_play()
 
     def pause(self):
         logging.debug('Player.pause')
@@ -273,6 +273,8 @@ class Player:
 
     def do_play(self):
         logging.debug('Player.do_play')
+        if self.is_playing:
+            return
         if not self.is_playable_callback(self.track):
             self.next()
         try:
@@ -302,7 +304,7 @@ class Player:
     def do_stop(self):
         logging.debug('Player.do_stop')
         self.mixer.stop()
-        # self.t_stop.set()
+        self.t_stop.set()
 
     def enumerate_genres(self, genres):
         logging.debug('Player.enumerate_genres')
@@ -383,34 +385,50 @@ class Player:
         logging.debug('Player.settings')
         self._settings.update(**kwargs)
 
-    # def _start_auto_play(self):
-    #     self._auto_play_thread = AutoPlayThread(kwargs={'player': self})
-    #     self._auto_play_thread.start()
+    def _start_auto_play(self):
+        self._auto_play_thread = AutoPlayThread(kwargs={'player': self})
+        self._auto_play_thread.start()
 
+    def get_pos(self):
+        pos = self.mixer.get_pos()
+        if pos == -1:
+            return '00:00'
+        seconds = (pos // 1000) % 60
+        minutes = (pos // (1000 * 60)) % 60
+        hours = (pos // (1000 * 60 * 60)) % 24
+        pos_str = str(hours) + ':' + str(minutes) + ':' + str(seconds)
+        logging.debug('Player.get_pos ' + pos_str)
+        return pos_str
 
-# class AutoPlayThread(threading.Thread):
+class AutoPlayThread(threading.Thread):
 
-#     def __init__(self, *args, **kwargs):
-#         self.player = kwargs['kwargs']['player']
-#         super(AutoPlayThread, self).__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        self.player = kwargs['kwargs']['player']
+        super(AutoPlayThread, self).__init__(*args, **kwargs)
 
-#     def run(self):
-#         while not self.player.t_stop.is_set():
-#             for event in pygame.event.get():
-#                 if event.type == self.player.TRACK_END:
-#                     self.player.next()
-#             if self.player._pause:
-#                 self.player._pause = False
-#                 self.player.do_pause()
-#             if self.player._play:
-#                 self.player._play = False
-#                 self.player.do_play()
-#             if self.player._next:
-#                 self.player._next = False
-#                 self.player.do_next()
-#             if self.player._stop:
-#                 self.player._stop = False
-#                 self.player.do_stop()
+    def run(self):
+        # First time sleep a little to avoid track end event
+        self.player.t_stop.wait(2)
+        while not self.player.t_stop.is_set():
+            for event in pygame.event.get():
+                if event.type == self.player.TRACK_END:
+                    logging.debug('AutoPlayThread.run TRACK_END event')
+                    self.player.next()
+            if self.player._pause:
+                logging.debug('AutoPlayThread.run pause')
+                self.player._pause = False
+                self.player.do_pause()
+            if self.player._play:
+                logging.debug('AutoPlayThread.run play')
+                self.player._play = False
+                self.player.do_play()
+            if self.player._next:
+                logging.debug('AutoPlayThread.run next')
+                self.player._next = False
+                self.player.do_next()
+            if self.player._stop:
+                logging.debug('AutoPlayThread.run stop')
+                self.player._stop = False
+                self.player.do_stop()
 
-#             self.player.t_stop.wait(.1)
-
+            self.player.t_stop.wait(.1)
