@@ -1,3 +1,4 @@
-pygame==1.9.2b8
+# Not sure if pin it or not
+pygame
 requests-cache==0.4.12
 requests==2.12.3
