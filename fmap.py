@@ -1,3 +1,4 @@
+import logging
 import os
 import random
 import requests
@@ -7,7 +8,6 @@ import threading
 import pygame
 
 pygame.init()
-
 
 FMA_API_URL = 'https://freemusicarchive.org/api/get/{0}.{1}?api_key={2}'
 FMA_API_KEY = os.environ.get('FMA_API_KEY')
@@ -33,11 +33,14 @@ def get_dataset_item_class(dataset_name):
     return globals()[class_name]
 
 
+logging.basicConfig(filename=os.path.join(get_project_dir('log'), 'fmap.log'), filemode='w', level=logging.DEBUG)
+
+
 class Content:
 
     def get_content(self, url, json=True):
         response = requests.get(url)
-        print(response.url, ['not', 'in'][response.from_cache], 'cache')
+        logging.debug('Content.get_content ' + response.url + [' not', ''][response.from_cache] + ' in cache')
 
         if response.ok:
             if json:
@@ -55,6 +58,7 @@ class Track(Content):
 
     def get_url(self):
         content = self.get_content(FMA_TRACK_SINGLE_URL.format(self.track_id))
+        logging.debug('Track.get_url ' + content['track_id'] + ' ' + content['track_url'])
         return content['track_listen_url']
 
 
@@ -76,22 +80,28 @@ class BaseBrowser(Content):
             )
 
     def load_dataset_all(self):
+        logging.debug('BaseBrowser.load_dataset_all')
         [i for i in self._load_dataset_all()]
 
     def load_dataset_by_page(self):
+        logging.debug('BaseBrowser.load_dataset_by_page')
         return self._load_dataset_all()
 
     def get_url(self):
+        logging.debug('BaseBrowser.get_url')
         return self.base_url
 
     def reset_items(self):
+        logging.debug('BaseBrowser.reset_items')
         self.items = []
 
     def check_totals(self, data):
+        logging.debug('BaseBrowser.check_totals')
         self.total_pages = data.get('total_pages', None)
         self.tolal = data.get('total_pages', None)
 
     def _load_dataset_all(self):
+        logging.debug('BaseBrowser._load_dataset_all')
         page = None
         while True:
             dataset, page = self._load_dataset_page(page)
@@ -102,6 +112,7 @@ class BaseBrowser(Content):
             yield
 
     def _load_dataset_page(self, page=None):
+        logging.debug('BaseBrowser._load_dataset_page')
         if self.total_pages is not None and page is not None and self.total_pages < page:
             return None, None
         url = self.get_url()
@@ -118,6 +129,7 @@ class BaseBrowser(Content):
         return data['dataset'], int(data['page'])
 
     def _set_items(self, dataset):
+        logging.debug('BaseBrowser._set_items')
         for item in dataset:
             i = self.dataset_class()
             i.__dict__.update(item)
@@ -144,17 +156,20 @@ class TrackBrowser(BaseBrowser):
         super(TrackBrowser, self).__init__()
 
     def get_url(self):
+        logging.debug('TrackBrowser.get_url')
         url = self.base_url
         if self.genre:
             url += '&genre_id=' + self.genre.genre_id
         return url
 
     def load_next_page(self):
+        logging.debug('TrackBrowser.load_next_page')
         if getattr(self, 'pager') is None:
             self.pager = self.load_dataset_by_page()
         self.pager.__next__()
 
     def set_genre(self, genre):
+        logging.debug('TrackBrowser.set_genre')
         self.reset_items()
         self.pager = None
         self.genre = genre
@@ -167,16 +182,20 @@ class PlayList:
         self.reset()
 
     def set_tracks(self, tracks):
+        logging.debug('PlayList.set_tracks')
         self.tracks = tracks
 
     def get_next_track(self):
+        logging.debug('PlayList.get_next_track')
         self.current_track_index += 1
         return self.get_current_track()
 
     def get_current_track(self):
+        logging.debug('PlayList.get_current_track')
         return self.get_track(self.current_track_index)
 
     def get_track(self, index):
+        logging.debug('PlayList.get_track')
         try:
             track = self.tracks[index]
             return track
@@ -188,6 +207,7 @@ class PlayList:
             raise e
 
     def load_tracks(self):
+        logging.debug('PlayList.load_tracks')
         try:
             self.track_browser.load_next_page()
             self.set_tracks(self.track_browser.items)
@@ -196,6 +216,7 @@ class PlayList:
             return False
 
     def reset(self, load=False):
+        logging.debug('PlayList.reset')
         self.tracks = []
         self.current_track_index = 0
         if load:
@@ -232,9 +253,11 @@ class Player:
         # self._start_auto_play()
 
     def pause(self):
+        logging.debug('Player.pause')
         self._pause = True
 
     def do_pause(self):
+        logging.debug('Player.do_pause')
         if self.is_playing:
             self.is_playing = False
             self.mixer.pause()
@@ -243,11 +266,13 @@ class Player:
             self.mixer.unpause()
 
     def play(self, track):
+        logging.debug('Player.play')
         self.track = track
         self._play = True
         self.do_play()
 
     def do_play(self):
+        logging.debug('Player.do_play')
         if not self.is_playable_callback(self.track):
             self.next()
         try:
@@ -255,35 +280,42 @@ class Player:
             self.mixer.play()
             self.is_playing = True
         except pygame.error as e:
-            print(e)
+            logging.error(e)
             self.play_failed_callback()
 
     def next(self):
+        logging.debug('Player.next')
         self._next = True
         self.do_next()
 
     def do_next(self):
+        logging.debug('Player.do_next')
         self.mixer.stop()
         self.is_playing = False
         self.play_next_track()
 
     def stop(self):
+        logging.debug('Player.stop')
         self._stop = True
         self.do_stop()
 
     def do_stop(self):
+        logging.debug('Player.do_stop')
         self.mixer.stop()
         # self.t_stop.set()
 
     def enumerate_genres(self, genres):
+        logging.debug('Player.enumerate_genres')
         genres.sort(key=lambda x: x.genre_title)
         enumerated = list(enumerate(genres))
         return enumerated
 
     def get_current_track(self):
+        logging.debug('Player.get_current_track')
         return self.play_list.get_current_track()
 
     def _get_track_file_name(self, track):
+        logging.debug('Player._get_track_file_name')
         project_dir = get_project_dir('cache')
         tmp_track_file_name = os.path.join(
             project_dir, str(track.track_id)
@@ -291,6 +323,7 @@ class Player:
         return tmp_track_file_name
 
     def get_track_file_name(self, track):
+        logging.debug('Player.get_track_file_name')
         in_cache = True
         tmp_track_file_name = self._get_track_file_name(track)
         if not os.path.exists(tmp_track_file_name):
@@ -298,20 +331,24 @@ class Player:
             with open(tmp_track_file_name, 'wb') as tmp_track:
                 track = track.get_content(track.get_url(), json=False)
                 tmp_track.write(track)
-        print(tmp_track_file_name, ['not', ''][in_cache], 'in cache')
+        logging.debug('Player.get_track_file_name ' + tmp_track_file_name + [' not', ''][in_cache] + ' in cache')
         return tmp_track_file_name
 
     def get_parent_genres(self):
+        logging.debug('Player.get_parent_genres')
         genres = [g for g in self.genres_browser.items if not g.genre_parent_id]
         return genres
 
     def get_settings(self):
+        logging.debug('Player.get_settings')
         return self._settings
 
     def load_random_genre(self):
+        logging.debug('Player.load_random_genre')
         self.set_genre(random.choice(self.genres_browser.items))
 
     def search_genres(self, term):
+        logging.debug('Player.search_genres')
         genres = []
         for g in self.genres_browser.items:
             if term.lower() in g.genre_title.lower():
@@ -319,25 +356,31 @@ class Player:
         return genres
 
     def play_random_genre(self):
+        logging.debug('Player.play_random_genre')
         self.load_random_genre()
         self.play_current_track()
 
     def is_busy(self):
+        logging.debug('Player.is_busy')
         return self.mixer.get_busy()
 
     def play_current_track(self):
+        logging.debug('Player.player_current_track')
         track = self.play_list.get_current_track()
         self.play(track)
 
     def play_next_track(self):
+        logging.debug('Player.play_next_track')
         track = self.play_list.get_next_track()
         self.play(track)
 
     def set_genre(self, genre):
+        logging.debug('Player.set_genre')
         self.track_browser.set_genre(genre)
         self.play_list.reset(load=False)
 
     def settings(self, **kwargs):
+        logging.debug('Player.settings')
         self._settings.update(**kwargs)
 
     # def _start_auto_play(self):
