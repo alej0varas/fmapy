@@ -396,7 +396,7 @@ class Player:
         seconds = (pos // 1000) % 60
         minutes = (pos // (1000 * 60)) % 60
         hours = (pos // (1000 * 60 * 60)) % 24
-        pos_str = str(hours) + ':' + str(minutes) + ':' + str(seconds)
+        pos_str = '{:02}:{:02}:{:02}'.format(hours, minutes, seconds)
         logging.debug('Player.get_pos ' + pos_str)
         return pos_str
 
