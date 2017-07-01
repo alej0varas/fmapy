@@ -55,7 +55,6 @@ class BaseUI:
 
     def song_ended(self):
         self.append_item_by_category(self.player.track, 'endeds', repeat=True)
-        self.player.next()
 
     def pause(self):
         self.player.pause()
@@ -77,11 +76,10 @@ class BaseUI:
 
     def play_failed(self):
         self.append_item_by_category(self.player.track, 'failed', repeat=True)
-        self.player.play_next_track()
 
     def next(self):
         self.append_item_by_category(self.player.track, 'skipped', repeat=True)
-        self.player.play_next_track()
+        self.player.next()
 
     def stop(self):
         self.player.stop()

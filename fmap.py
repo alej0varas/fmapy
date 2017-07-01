@@ -41,6 +41,7 @@ class Content:
     def get_content(self, url, json=True):
         response = requests.get(url)
         logging.debug('Content.get_content ' + response.url + [' not', ''][response.from_cache] + ' in cache')
+        logging.debug('Content.get_content ' + str(response.content)[:100])
 
         if response.ok:
             if json:
@@ -254,10 +255,6 @@ class Player:
 
     def pause(self):
         logging.debug('Player.pause')
-        self._pause = True
-
-    def do_pause(self):
-        logging.debug('Player.do_pause')
         if self.is_playing:
             self.is_playing = False
             self.mixer.pause()
@@ -268,11 +265,6 @@ class Player:
     def play(self, track):
         logging.debug('Player.play')
         self.track = track
-        self._play = True
-        self.do_play()
-
-    def do_play(self):
-        logging.debug('Player.do_play')
         if self.is_playing:
             return
         if not self.is_playable_callback(self.track):
@@ -284,25 +276,17 @@ class Player:
         except pygame.error as e:
             logging.error(e)
             self.play_failed_callback()
+            self.play_next_track()
 
     def next(self):
         logging.debug('Player.next')
-        self._next = True
-        self.do_next()
-
-    def do_next(self):
-        logging.debug('Player.do_next')
         self.mixer.stop()
         self.is_playing = False
-        self.play_next_track()
+        track = self.play_list.get_next_track()
+        self.play(track)
 
     def stop(self):
         logging.debug('Player.stop')
-        self._stop = True
-        self.do_stop()
-
-    def do_stop(self):
-        logging.debug('Player.do_stop')
         self.mixer.stop()
         self.t_stop.set()
 
@@ -371,11 +355,6 @@ class Player:
         track = self.play_list.get_current_track()
         self.play(track)
 
-    def play_next_track(self):
-        logging.debug('Player.play_next_track')
-        track = self.play_list.get_next_track()
-        self.play(track)
-
     def set_genre(self, genre):
         logging.debug('Player.set_genre')
         self.track_browser.set_genre(genre)
@@ -400,6 +379,11 @@ class Player:
         logging.debug('Player.get_pos ' + pos_str)
         return pos_str
 
+    def track_ended(self):
+        self.track_ended_callback()
+        self.next()
+
+
 class AutoPlayThread(threading.Thread):
 
     def __init__(self, *args, **kwargs):
@@ -413,22 +397,6 @@ class AutoPlayThread(threading.Thread):
             for event in pygame.event.get():
                 if event.type == self.player.TRACK_END:
                     logging.debug('AutoPlayThread.run TRACK_END event')
-                    self.player.next()
-            if self.player._pause:
-                logging.debug('AutoPlayThread.run pause')
-                self.player._pause = False
-                self.player.do_pause()
-            if self.player._play:
-                logging.debug('AutoPlayThread.run play')
-                self.player._play = False
-                self.player.do_play()
-            if self.player._next:
-                logging.debug('AutoPlayThread.run next')
-                self.player._next = False
-                self.player.do_next()
-            if self.player._stop:
-                logging.debug('AutoPlayThread.run stop')
-                self.player._stop = False
-                self.player.do_stop()
+                    self.player.track_ended()
 
             self.player.t_stop.wait(.1)

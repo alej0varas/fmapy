@@ -23,6 +23,7 @@ class CLI(baseui.BaseUI):
         logging.debug('CLI.menu')
         while True:
             option = input('>> ')
+            logging.debug('CLI option ' + option)
             if option == 'g':
                 self.play_genre_from_parents()
             if option == 'o':
