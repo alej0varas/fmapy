@@ -43,17 +43,18 @@ class CLI(baseui.BaseUI):
             if option == 'q':
                 self.quit()
                 break
+            if option == 'n':
+                self.next()
+            if option == 'p':
+                self.pause()
+            if option == '':
+                self.status()
             if self.player.is_busy():
                 if option == 'f':
                     self.favourite()
                 if option == 'h':
                     self.hate()
-                if option == 'n':
-                    self.next()
-                if option == 'p':
-                    self.pause()
-            if option == '':
-                self.status()
+
 
     def play_genre_from_parents(self):
         logging.debug('CLI.play_genre_from_parents')
@@ -74,6 +75,7 @@ class CLI(baseui.BaseUI):
     def status(self):
         logging.debug('CLI.status')
         logging.debug('is playing ' + str(self.player.is_playing))
+        logging.debug('status ' + str(self.player.status))
         logging.debug('is busy ' + str(self.player.mixer.get_busy()))
         logging.debug(str(self.player.get_settings()))
         print('Settings', self.player.get_settings())

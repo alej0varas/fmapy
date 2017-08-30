@@ -233,10 +233,8 @@ class PlayList:
 class Player:
 
     track = None
-    _play = None
-    _pause = None
-    _next = None
-    _stop = None
+    PAUSE, PLAY = 0, 1
+    status = PAUSE
     is_playing = False
     _settings = {
         'only_new': False,
@@ -254,27 +252,29 @@ class Player:
         self.mixer = pygame.mixer.music
         self.t_stop = threading.Event()
 
-        self.TRACK_END = pygame.USEREVENT + 1
-        pygame.mixer.music.set_endevent(self.TRACK_END)
-
         self._start_auto_play()
 
     def pause(self):
         logging.debug('Player.pause')
-        if self.is_playing:
-            self.is_playing = False
+        if self.status == self.PLAY:
+            self.status = self.PAUSE
             self.mixer.pause()
         else:
-            self.is_playing = True
+            self.status = self.PLAY
             self.mixer.unpause()
 
-    def play(self, track):
+    def play(self):
         logging.debug('Player.play')
-        self.track = track
-        if self.is_playing:
+        if self.status == self.PLAY:
             return
+        if self.track is None:
+            self.track = self.play_list.get_current_track()
         if not self.is_playable_callback(self.track):
             self.next()
+        self.status = self.PLAY
+
+    def _play(self):
+        logging.debug('Player._play')
         try:
             self.mixer.load(self.get_track_file_name(self.track))
             self.mixer.play()
@@ -282,14 +282,13 @@ class Player:
         except pygame.error as e:
             logging.error(e)
             self.play_failed_callback()
-            self.next()
+            self.is_playing = False
 
     def next(self):
         logging.debug('Player.next')
         self.mixer.stop()
         self.is_playing = False
-        track = self.play_list.get_next_track()
-        self.play(track)
+        self.track = self.play_list.get_next_track()
 
     def stop(self):
         logging.debug('Player.stop')
@@ -350,16 +349,11 @@ class Player:
     def play_random_genre(self):
         logging.debug('Player.play_random_genre')
         self.load_random_genre()
-        self.play_current_track()
+        self.play()
 
     def is_busy(self):
         logging.debug('Player.is_busy')
         return self.mixer.get_busy()
-
-    def play_current_track(self):
-        logging.debug('Player.player_current_track')
-        track = self.play_list.get_current_track()
-        self.play(track)
 
     def set_genre(self, genre):
         logging.debug('Player.set_genre')
@@ -390,7 +384,6 @@ class Player:
 
     def track_ended(self):
         self.track_ended_callback()
-        self.next()
 
 
 class AutoPlayThread(threading.Thread):
@@ -402,7 +395,11 @@ class AutoPlayThread(threading.Thread):
     def run(self):
         while not self.player.t_stop.is_set():
             if self.player.track is not None:
+                if self.player.status == Player.PLAY and not self.player.is_playing:
+                    self.player._play()
+                    logging.debug('AutoPlayThread.run auto play')
                 if self.player._get_pos() == self.player.track.get_duration():
                     self.player.track_ended()
-                    logging.debug('AutoPlayThread.run TRACK_END event')
+                    self.player.next()
+                    logging.debug('AutoPlayThread.run track ended')
                 self.player.t_stop.wait(1)

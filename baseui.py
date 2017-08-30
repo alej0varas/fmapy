@@ -72,7 +72,7 @@ class BaseUI:
         return True
 
     def play(self):
-        self.player.play_current_track()
+        self.player.play()
 
     def play_failed(self):
         self.append_item_by_category(self.player.track, 'failed', repeat=True)
