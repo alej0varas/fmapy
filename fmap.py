@@ -7,7 +7,9 @@ import threading
 
 import pygame
 
-pygame.init()
+# We only initialize the mixer so we can play from without graphic
+# system(X).
+pygame.mixer.init()
 
 FMA_API_URL = 'https://freemusicarchive.org/api/get/{0}.{1}?api_key={2}'
 FMA_API_KEY = os.environ.get('FMA_API_KEY')
@@ -56,6 +58,10 @@ class Genre:
 
 
 class Track(Content):
+
+    def get_duration(self):
+        minutes, seconds = map(int, self.track_duration.split(':'))
+        return minutes * 60 + seconds
 
     def get_url(self):
         content = self.get_content(FMA_TRACK_SINGLE_URL.format(self.track_id))
@@ -276,7 +282,7 @@ class Player:
         except pygame.error as e:
             logging.error(e)
             self.play_failed_callback()
-            self.play_next_track()
+            self.next()
 
     def next(self):
         logging.debug('Player.next')
@@ -368,7 +374,10 @@ class Player:
         self._auto_play_thread = AutoPlayThread(kwargs={'player': self})
         self._auto_play_thread.start()
 
-    def get_pos(self):
+    def _get_pos(self):
+        return self.mixer.get_pos() // 1000
+
+    def get_pos_str(self):
         pos = self.mixer.get_pos()
         if pos == -1:
             return '00:00'
@@ -391,12 +400,9 @@ class AutoPlayThread(threading.Thread):
         super(AutoPlayThread, self).__init__(*args, **kwargs)
 
     def run(self):
-        # First time sleep a little to avoid track end event
-        self.player.t_stop.wait(2)
         while not self.player.t_stop.is_set():
-            for event in pygame.event.get():
-                if event.type == self.player.TRACK_END:
-                    logging.debug('AutoPlayThread.run TRACK_END event')
+            if self.player.track is not None:
+                if self.player._get_pos() == self.player.track.get_duration():
                     self.player.track_ended()
-
-            self.player.t_stop.wait(.1)
+                    logging.debug('AutoPlayThread.run TRACK_END event')
+                self.player.t_stop.wait(1)

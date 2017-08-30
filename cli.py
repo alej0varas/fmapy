@@ -78,7 +78,7 @@ class CLI(baseui.BaseUI):
         logging.debug(str(self.player.get_settings()))
         print('Settings', self.player.get_settings())
         try:
-            print(' Playing:', self.player.track.track_title, self.player.track.track_id, self.player.get_pos(), self.player.track.track_duration)
+            print(' Playing:', self.player.track.track_title, self.player.track.track_id, self.player.get_pos_str(), self.player.track.track_duration)
             print(' Genre:', self.player.track_browser.genre.genre_title, self.player.track_browser.genre.genre_id)
         except:
             pass
