@@ -1,3 +1,4 @@
+import os
 import logging
 
 import baseui
@@ -74,9 +75,6 @@ class CLI(baseui.BaseUI):
 
     def status(self):
         logging.debug('CLI.status')
-        logging.debug('status ' + str(self.player.status))
-        logging.debug('is busy ' + str(self.player.mixer.get_busy()))
-        logging.debug(str(self.player.get_settings()))
         print('Settings', self.player.get_settings())
         try:
             print(' Playing:', self.player.track.track_title, self.player.track.track_id, self.player.get_pos_str(), self.player.track.track_duration)
@@ -102,5 +100,8 @@ class CLI(baseui.BaseUI):
 
 
 if __name__ == '__main__':
+    # This allow us to use pygame events without a graphic
+    # environment.
+    os.environ["SDL_VIDEODRIVER"] = "dummy"
     cli = CLI()
     cli.menu()

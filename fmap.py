@@ -7,9 +7,6 @@ import threading
 
 import pygame
 
-# We only initialize the mixer so we can play from without graphic
-# system(X).
-pygame.mixer.init()
 
 FMA_API_URL = 'https://freemusicarchive.org/api/get/{0}.{1}?api_key={2}'
 FMA_API_KEY = os.environ.get('FMA_API_KEY')
@@ -233,14 +230,15 @@ class PlayList:
 class Player:
 
     track = None
-    PAUSE, PLAY = 0, 1
-    status = PAUSE
+    is_playing = True
     _settings = {
         'only_new': False,
         'only_instrumental': False
     }
 
     def __init__(self, track_ended_callback, play_failed_callback, is_playable_callback):
+        # We initialize after SDL_VIDEODRIVER is set
+        pygame.init()
         self.track_browser = TrackBrowser()
         self.genres_browser = GenresBrowser()
         self.play_list = PlayList(self.track_browser)
@@ -255,25 +253,21 @@ class Player:
 
     def pause(self):
         logging.debug('Player.pause')
-        if self.status == self.PLAY:
-            self.status = self.PAUSE
+        if self.is_playing:
             self.mixer.pause()
+            self.is_playing = False
         else:
-            self.status = self.PLAY
             self.mixer.unpause()
+            self.is_playing = True
 
     def play(self):
         logging.debug('Player.play')
-        if self.status == self.PLAY:
+        if self.is_busy():
             return
         if self.track is None:
             self.track = self.play_list.get_current_track()
         if not self.is_playable_callback(self.track):
             self.next()
-        self.status = self.PLAY
-
-    def _play(self):
-        logging.debug('Player._play')
         try:
             self.mixer.load(self.get_track_file_name(self.track))
             self.mixer.play()
@@ -362,6 +356,7 @@ class Player:
         self._settings.update(**kwargs)
 
     def _start_auto_play(self):
+        pygame.mixer.music.set_endevent(pygame.USEREVENT)
         self._auto_play_thread = AutoPlayThread(kwargs={'player': self})
         self._auto_play_thread.start()
 
@@ -384,6 +379,7 @@ class Player:
 
 
 class AutoPlayThread(threading.Thread):
+    DELAY = .2
 
     def __init__(self, *args, **kwargs):
         self.player = kwargs['kwargs']['player']
@@ -391,12 +387,10 @@ class AutoPlayThread(threading.Thread):
 
     def run(self):
         while not self.player.t_stop.is_set():
-            if self.player.track is not None:
-                if self.player.status == Player.PLAY and not self.player.is_busy():
-                    self.player._play()
-                    logging.debug('AutoPlayThread.run auto play')
-                if self.player._get_pos() == self.player.track.get_duration():
-                    self.player.track_ended()
-                    self.player.next()
-                    logging.debug('AutoPlayThread.run track ended')
-                self.player.t_stop.wait(1)
+            event = pygame.event.get(pygame.USEREVENT)
+            if event:
+                self.player.track_ended()
+                self.player.next()
+                self.player.play()
+                logging.debug('AutoPlayThread.run track ended')
+            self.player.t_stop.wait(self.DELAY)
