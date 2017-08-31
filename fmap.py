@@ -235,7 +235,6 @@ class Player:
     track = None
     PAUSE, PLAY = 0, 1
     status = PAUSE
-    is_playing = False
     _settings = {
         'only_new': False,
         'only_instrumental': False
@@ -278,16 +277,14 @@ class Player:
         try:
             self.mixer.load(self.get_track_file_name(self.track))
             self.mixer.play()
-            self.is_playing = True
         except pygame.error as e:
             logging.error(e)
             self.play_failed_callback()
-            self.is_playing = False
+            self.next()
 
     def next(self):
         logging.debug('Player.next')
         self.mixer.stop()
-        self.is_playing = False
         self.track = self.play_list.get_next_track()
 
     def stop(self):
@@ -395,7 +392,7 @@ class AutoPlayThread(threading.Thread):
     def run(self):
         while not self.player.t_stop.is_set():
             if self.player.track is not None:
-                if self.player.status == Player.PLAY and not self.player.is_playing:
+                if self.player.status == Player.PLAY and not self.player.is_busy():
                     self.player._play()
                     logging.debug('AutoPlayThread.run auto play')
                 if self.player._get_pos() == self.player.track.get_duration():
