@@ -74,7 +74,6 @@ class CLI(baseui.BaseUI):
 
     def status(self):
         logging.debug('CLI.status')
-        logging.debug('is playing ' + str(self.player.is_playing))
         logging.debug('status ' + str(self.player.status))
         logging.debug('is busy ' + str(self.player.mixer.get_busy()))
         logging.debug(str(self.player.get_settings()))
