@@ -230,7 +230,8 @@ class PlayList:
 class Player:
 
     track = None
-    is_playing = True
+    PAUSE, PLAY = 0, 1
+    status = PLAY
     _settings = {
         'only_new': False,
         'only_instrumental': False
@@ -253,12 +254,12 @@ class Player:
 
     def pause(self):
         logging.debug('Player.pause')
-        if self.is_playing:
+        if self.is_playing():
             self.mixer.pause()
-            self.is_playing = False
+            self.status = self.PAUSE
         else:
             self.mixer.unpause()
-            self.is_playing = True
+            self.status = self.PLAY
 
     def play(self):
         logging.debug('Player.play')
@@ -285,6 +286,9 @@ class Player:
         logging.debug('Player.stop')
         self.mixer.stop()
         self.t_stop.set()
+
+    def is_playing(self):
+        return self.status == self.PLAY
 
     def enumerate_genres(self, genres):
         logging.debug('Player.enumerate_genres')
@@ -391,6 +395,8 @@ class AutoPlayThread(threading.Thread):
             if event:
                 self.player.track_ended()
                 self.player.next()
-                self.player.play()
                 logging.debug('AutoPlayThread.run track ended')
+
+            if self.player.is_playing() and not self.player.is_busy():
+                self.player.play()
             self.player.t_stop.wait(self.DELAY)
