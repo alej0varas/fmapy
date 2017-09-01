@@ -269,6 +269,7 @@ class Player:
             self.track = self.play_list.get_current_track()
         if not self.is_playable_callback(self.track):
             self.next()
+            return
         try:
             self.mixer.load(self.get_track_file_name(self.track))
             self.mixer.play()
