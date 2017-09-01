@@ -8,25 +8,28 @@ import baseui
 
 class GUI(baseui.BaseUI):
 
-    def menu(self, width=640, height=480):
+    def menu(self, width=128 * 4, height=128 * 2):
         self.size = [height, width]
 
         self.screen = self.prepare()
 
         self.grid = Grid(width=4)
+
         button_play = Button('play', self.play)
         self.grid.add(button_play)
+
         button_next = Button('next', self.next)
         self.grid.add(button_next)
-        button_stop = Button('stop', self.stop)
-        self.grid.add(button_stop)
-        button_exit = Button('exit', self.exit)
 
+        button_only_new = Button('only_new', self.button_settings, 'only_new')
+        self.grid.add(button_only_new)
+
+        button_exit = Button('exit', self.exit)
         self.grid.add(button_exit)
 
         self.resize()
 
-        while 1:
+        while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.exit()
@@ -34,7 +37,7 @@ class GUI(baseui.BaseUI):
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     for element in self.grid.elements:
                         if element.rect.collidepoint(event.pos):
-                            element.callback()
+                            element.call_callback()
 
             for element in self.grid.elements:
                 self.screen.blit(element.image, element.rect)
@@ -59,15 +62,34 @@ class GUI(baseui.BaseUI):
         size = self.grid.get_size()
         self.screen = pygame.display.set_mode(size)
 
+    ###
+    # Buttons
+    ###
+
+    def button_settings(self, setting):
+        print(setting)
+        print(not self.player.get_settings()[setting])
+        self.player.settings(**{setting: not self.player.get_settings()[setting]})
+
 
 class Button:
     rect = None
 
-    def __init__(self, name, callback):
+    def __init__(self, name, callback, *args):
         self.name = name
+        self.name_toggle = self.name
         self.callback = callback
+        self.args = args or []
         self.image = load_image(self.name)
         self.rect = self.image.get_rect()
+
+    def call_callback(self):
+        # Toggle button if necessary
+        name = self.name
+        self.name_toggle = self.name
+        self.name = name
+        self.image = load_image(name)
+        self.callback(*self.args)
 
     def resize_and_position(self, rect, width, height):
         dst_surface = pygame.Surface((width, height))

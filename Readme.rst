@@ -37,3 +37,7 @@ Usage
    i - toggle: play all/new (default is to play all)
    o - toggle: all/instrumental (default is to play all)
    q - quit
+
+
+Icons by::
+  - https://www.flaticon.com/authors/smashicons
