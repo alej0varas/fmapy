@@ -1,4 +1,4 @@
-# Not sure if pin it or not
 pygame
-requests-cache==0.4.12
-requests==2.12.3
+requests-cache
+requests
+mutagen

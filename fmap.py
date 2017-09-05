@@ -5,6 +5,7 @@ import requests
 import requests_cache
 import threading
 
+import mutagen.mp3
 import pygame
 
 
@@ -240,6 +241,7 @@ class Player:
     def __init__(self, track_ended_callback, play_failed_callback, is_playable_callback):
         # We initialize after SDL_VIDEODRIVER is set
         pygame.init()
+        pygame.mixer.init()
         self.track_browser = TrackBrowser()
         self.genres_browser = GenresBrowser()
         self.play_list = PlayList(self.track_browser)
@@ -271,7 +273,14 @@ class Player:
             self.next()
             return
         try:
-            self.mixer.load(self.get_track_file_name(self.track))
+            pygame.mixer.quit()
+            track_file_name = self.get_track_file_name(self.track)
+            mp3 = mutagen.mp3.MP3(track_file_name)
+            frequency=mp3.info.sample_rate
+            pygame.mixer.init(frequency=frequency)
+            logging.debug('Player.play: frequency ' + str(frequency))
+            print
+            self.mixer.load(track_file_name)
             self.mixer.play()
         except pygame.error as e:
             logging.error(e)
@@ -280,7 +289,8 @@ class Player:
 
     def next(self):
         logging.debug('Player.next')
-        self.mixer.stop()
+        if pygame.mixer.get_init():
+            self.mixer.stop()
         self.track = self.play_list.get_next_track()
 
     def stop(self):
@@ -349,7 +359,8 @@ class Player:
 
     def is_busy(self):
         logging.debug('Player.is_busy')
-        return self.mixer.get_busy()
+        if pygame.mixer.get_init():
+            return self.mixer.get_busy()
 
     def set_genre(self, genre):
         logging.debug('Player.set_genre')
