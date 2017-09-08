@@ -275,11 +275,13 @@ class Player:
         try:
             pygame.mixer.quit()
             track_file_name = self.get_track_file_name(self.track)
-            mp3 = mutagen.mp3.MP3(track_file_name)
-            frequency=mp3.info.sample_rate
+            try:
+                mp3 = mutagen.mp3.MP3(track_file_name)
+                frequency = mp3.info.sample_rate
+            except mutagen.mp3.HeaderNotFoundError:
+                frequency = 44100
             pygame.mixer.init(frequency=frequency)
             logging.debug('Player.play: frequency ' + str(frequency))
-            print
             self.mixer.load(track_file_name)
             self.mixer.play()
         except pygame.error as e:
