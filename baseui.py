@@ -10,6 +10,8 @@ class BaseUI:
 
         self.player = fmap.Player(self.song_ended, self.play_failed, self.check_if_playable_callback)
 
+        self._items_by_category = {}
+
     def append_item_by_category(self, item, category, repeat=False):
         items = self.get_items_by_category(category)
         items.append(item.track_id)
@@ -27,6 +29,9 @@ class BaseUI:
         return category_file_path
 
     def get_items_by_category(self, category):
+        if category in self._items_by_category:
+            return self._items_by_category[category]
+
         items_file_path = self.get_category_file_path(category)
         items = []
         try:
@@ -35,6 +40,8 @@ class BaseUI:
             items_file.close()
         except FileNotFoundError:
             pass
+
+        self._items_by_category[category] = items
         return items
 
     def hate(self):
@@ -85,6 +92,7 @@ class BaseUI:
         self.player.stop()
 
     def store_items_by_category(self, items, category):
+        del(self._items_by_category[category])
         items_file_path = self.get_category_file_path(category)
         items = '\n'.join(items)
         with open(items_file_path, 'w') as items_file:
