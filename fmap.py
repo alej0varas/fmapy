@@ -397,20 +397,29 @@ class Player:
 
 
 class AutoPlayThread(threading.Thread):
-    DELAY = .2
+    COUNTER = 2
+    COUNTER_FACTOR = 1.1
+    DELAY = .4
 
     def __init__(self, *args, **kwargs):
         self.player = kwargs['kwargs']['player']
         super(AutoPlayThread, self).__init__(*args, **kwargs)
 
     def run(self):
+        counter = self.COUNTER
         while not self.player.t_stop.is_set():
             event = pygame.event.get(pygame.USEREVENT)
+            # Get next song
             if event:
                 self.player.track_ended()
                 self.player.next()
                 logging.debug('AutoPlayThread.run track ended')
 
+            # Play if required
             if self.player.is_playing() and not self.player.is_busy():
                 self.player.play()
-            self.player.t_stop.wait(self.DELAY)
+                counter *= self.COUNTER_FACTOR
+            else:
+                counter = self.COUNTER
+
+            self.player.t_stop.wait(self.DELAY / counter)
