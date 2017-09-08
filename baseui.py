@@ -99,8 +99,7 @@ class BaseUI:
             items_file.write(items)
 
     def track_is_new(self, track):
-        tmp_track_file_name = self.player._get_track_file_name(track)
-        return not os.path.exists(tmp_track_file_name)
+        return not self.is_item_in_category(track, 'endeds')
 
     def quit(self):
         self.stop()
