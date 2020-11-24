@@ -5,7 +5,6 @@ import urllib
 
 import browsers
 import caches
-import scrapers
 
 
 class Fmapy:
