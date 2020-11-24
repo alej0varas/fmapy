@@ -1,4 +1,4 @@
 /.env
 *~
 *.pyc
-/cache.sqlite
+/Readme.html
