@@ -1,4 +1,4 @@
-import logger
+import logging
 import pathlib
 import urllib
 
@@ -32,7 +32,7 @@ class Fmapy:
             self._write_song_to_file(filename, content)
             self._cache.write(song)
         else:
-            logger.debug("Failed to download " + song)
+            logging.debug("Failed to download " + song)
             raise FmapyError
         return filename
 
