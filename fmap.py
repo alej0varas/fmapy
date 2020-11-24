@@ -9,7 +9,7 @@ class Fmapy:
     def __init__(self):
         fmapy_path = pathlib.Path.home().joinpath(".fmapy")
         fmapy_path.mkdir(exist_ok=True)
-        cache_path = fmapy_path.joinpath("cache.txt")
+        cache_path = str(fmapy_path.joinpath("cache.txt"))
         download_path = fmapy_path.joinpath("downloads")
         try:
             open(cache_path, "x")
@@ -46,7 +46,7 @@ class Fmapy:
             pathlib.Path(path_from_url[path_from_url.find(cut) + len(cut) :])
         )
         path.parent.mkdir(parents=True, exist_ok=True)
-        return path
+        return str(path)
 
 
 class FmapyError(Exception):
