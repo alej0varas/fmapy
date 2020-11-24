@@ -2,6 +2,8 @@ import logging
 import pathlib
 import urllib
 
+
+import browsers
 import caches
 import scrapers
 
@@ -16,23 +18,22 @@ class Fmapy:
             open(cache_path, "x")
         except FileExistsError:
             pass
-        with open(cache_path) as cache_file:
-            cache = caches.Cache(cache_path, map(str.strip, cache_file.readlines()))
-        self._scraper = scrapers.Scraper()
-        self._cache = cache
+
+        self.browser = browsers.FMASearch()
+        self._cache = caches.Cache(cache_path)
         self._download_path = download_path
 
     def download_song(self, song):
         if song in self._cache:
             return
-        url_full = self._scraper.get_full_url(song)
+        url_full = self.browser.get_full_url(song)
         filename = self._get_filename_for_song(url_full)
-        content = self._scraper.download_song(url_full)
+        content = self.browser.download_song(url_full)
         if content:
             self._write_song_to_file(filename, content)
             self._cache.write(song)
         else:
-            logging.debug("Failed to download " + song)
+            logging.error("Failed to download " + song)
             raise FmapyError
         return filename
 

@@ -1,10 +1,10 @@
 class Cache:
-    def __init__(self, path, items):
+    def __init__(self, path):
         self._path = path
-        self._items = items
 
     def __contains__(self, item):
-        return item in self._items
+        with open(self._path) as cache_file:
+            return item in map(str.strip, cache_file.readlines())
 
     def write(self, item):
         with open(self._path, "a") as cache_file:

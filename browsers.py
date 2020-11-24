@@ -1,5 +1,9 @@
+import datetime
+import logging
 import random
 import re
+import time
+
 
 import requests
 from bs4 import BeautifulSoup
@@ -8,6 +12,10 @@ from bs4 import BeautifulSoup
 class FMABrowser:
     URL = "https://freemusicarchive.org/search/?quicksearch="
     TIMEOUT = 30
+
+    def __init__(self, nap_min=30, nap_max=60):
+        self.nap_min = nap_min
+        self.nap_max = nap_max
 
     def __iter__(self):
         return self
@@ -49,9 +57,27 @@ class FMABrowser:
         if response.status_code == 200:
             self._content = response.content
         self._get_soup()
+        if hasattr(self, '_last_get_page_get_time') and (self._last_get_page_get_time < datetime.datetime.now() + datetime.timedelta(seconds=30)):
+            self._take_a_nap()
+        self._last_get_page_get_time = datetime.datetime.now()
+
+    def _take_a_nap(self):
+        nap = random.randint(self.nap_min, self.nap_max)
+        logging.error('taking a nap: ' + str(nap) + ' seconds')
+        time.sleep(nap)
 
     def _get_soup(self):
         self._soup = BeautifulSoup(self._content, "html.parser")
+
+    def download_song(self, url):
+        response = requests.get(url)
+        if response.status_code == 200:
+            self._take_a_nap()
+            return response.content
+
+    def get_full_url(self, url):
+        response = requests.get(url, allow_redirects=False)
+        return response.next.url
 
 
 class FMASearch(FMABrowser):

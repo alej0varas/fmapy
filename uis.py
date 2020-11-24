@@ -12,15 +12,14 @@ class CUISearch:
 
     def main(self):
         searching = True
-        browser = browsers.FMASearch()
         while searching:
             search_term = input("What are you looking for: ")
-            print(browser.search(search_term))
+            print(self.fmapy.browser.search(search_term))
             answer = input("Do you want to download them [Y/n]")
             if answer.lower() in ["y", ""]:
                 searching = False
 
-        for song in browser:
+        for song in self.fmapy.browser:
             print("Downloading: ", song)
             try:
                 filename = self.fmapy.download_song(song)
