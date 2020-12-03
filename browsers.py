@@ -57,13 +57,16 @@ class FMABrowser:
         if response.status_code == 200:
             self._content = response.content
         self._get_soup()
-        if hasattr(self, '_last_get_page_get_time') and (self._last_get_page_get_time < datetime.datetime.now() + datetime.timedelta(seconds=30)):
+        if hasattr(self, "_last_get_page_get_time") and (
+            self._last_get_page_get_time
+            < datetime.datetime.now() + datetime.timedelta(seconds=30)
+        ):
             self._take_a_nap()
         self._last_get_page_get_time = datetime.datetime.now()
 
     def _take_a_nap(self):
         nap = random.randint(self.nap_min, self.nap_max)
-        logging.error('taking a nap: ' + str(nap) + ' seconds')
+        logging.error("taking a nap: " + str(nap) + " seconds")
         time.sleep(nap)
 
     def _get_soup(self):
