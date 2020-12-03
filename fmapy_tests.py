@@ -1,14 +1,36 @@
 import unittest
+import unittest.mock
 
 
 import fmap
+import uis
 
 
-class CacheTests(unittest.TestCase):
-    def test_contains(self):
-        c = fmap.Cache("path", [1, 2, 3])
-        self.assertTrue(1 in c)
-        self.assertFalse(0, c)
+URL_404 = "https://freemusicarchive.org/track/OX/download"
+
+
+class FmapyTests(unittest.TestCase):
+    def test_download_song_exception(self):
+        f = fmap.Fmapy()
+        with unittest.mock.patch.object(
+            f.browser, "download_song", return_value=None
+        ), unittest.mock.patch.object(uis.CUISearch, "search"):
+
+            self.assertRaises(fmap.FmapyError, f.download_song, URL_404)
+
+
+class CUISearchTests(unittest.TestCase):
+    def test_main_fmapyerro_exception(self):
+        f = fmap.Fmapy()
+        u = uis.CUISearch(f)
+        with unittest.mock.patch(
+            "browsers.FMABrowser.__next__", side_effect=(URL_404, StopIteration)
+        ), unittest.mock.patch.object(
+            f, "download_song", side_effect=fmap.FmapyError
+        ), unittest.mock.patch.object(
+            uis.CUISearch, "search"
+        ):
+            u.main()
 
 
 if __name__ == "__main__":

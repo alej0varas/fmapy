@@ -55,7 +55,8 @@ class FmapyError(Exception):
 
 
 def main(UI_class):
-    UI_class(Fmapy())
+    u = UI_class(Fmapy())
+    u.main()
 
 
 if __name__ == "__main__":
