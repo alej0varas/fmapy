@@ -14,8 +14,7 @@ class FmapyTests(unittest.TestCase):
         f = fmap.Fmapy()
         with unittest.mock.patch.object(
             f.browser, "download_song", return_value=None
-        ), unittest.mock.patch.object(uis.CUISearch, "search"):
-
+        ), unittest.mock.patch.object(f.browser, "get_full_url", return_value=""):
             self.assertRaises(fmap.FmapyError, f.download_song, URL_404)
 
 
