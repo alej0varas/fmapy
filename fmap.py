@@ -62,4 +62,4 @@ def main(UI_class):
 if __name__ == "__main__":
     import uis
 
-    main(uis.CUISearch)
+    main(uis.CLISearch)

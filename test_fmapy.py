@@ -18,16 +18,16 @@ class FmapyTests(unittest.TestCase):
             self.assertRaises(fmap.FmapyError, f.download_song, URL_404)
 
 
-class CUISearchTests(unittest.TestCase):
+class CLISearchTests(unittest.TestCase):
     def test_main_fmapyerro_exception(self):
         f = fmap.Fmapy()
-        u = uis.CUISearch(f)
+        u = uis.CLISearch(f)
         with unittest.mock.patch(
             "browsers.FMABrowser.__next__", side_effect=(URL_404, StopIteration)
         ), unittest.mock.patch.object(
             f, "download_song", side_effect=fmap.FmapyError
         ), unittest.mock.patch.object(
-            uis.CUISearch, "search"
+            uis.CLISearch, "search"
         ):
             u.main()
 

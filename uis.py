@@ -1,7 +1,7 @@
 import fmap
 
 
-class CUISearch:
+class CLISearch:
     def __init__(self, fmapy):
         self.download_count = 0
         self.fmapy = fmapy
