@@ -26,3 +26,6 @@ Ideas/Todos
 - IDEA: write a player again. to be able forward and skip songs at least
 - IDEA: Have different browsers(genre[ ], curator[ ], search[X])
 
+.. note::
+   Project Structure
+   based on https://docs.python-guide.org/writing/structure/

@@ -3,8 +3,9 @@ import pathlib
 import urllib
 
 
-import browsers
-import caches
+from . import browsers
+from . import caches
+from . import exceptions
 
 
 class Fmapy:
@@ -33,7 +34,7 @@ class Fmapy:
             self._cache.write(song)
         else:
             logging.error("Failed to download " + song)
-            raise FmapyError
+            raise exceptions.FmapyError
         return filename
 
     def _write_song_to_file(self, filename, content):
@@ -48,10 +49,6 @@ class Fmapy:
         )
         path.parent.mkdir(parents=True, exist_ok=True)
         return str(path)
-
-
-class FmapyError(Exception):
-    pass
 
 
 def main(UI_class):

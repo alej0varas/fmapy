@@ -1,4 +1,4 @@
-import fmap
+from . import exceptions
 
 
 class CLISearch:
@@ -12,7 +12,7 @@ class CLISearch:
             print("Downloading: ", song)
             try:
                 filename = self.fmapy.download_song(song)
-            except fmap.FmapyError:
+            except exceptions.FmapyError:
                 print("Failed to download:", song)
             else:
                 if filename:

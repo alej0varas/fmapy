@@ -1,0 +1,2 @@
+class FmapyError(Exception):
+    pass
