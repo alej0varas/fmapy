@@ -2,13 +2,7 @@
  (BETA) Free Music Archive Player
 ==================================
 
-(NOT) THANKS to http://freemusicarchive.org/ for the music!
-
-Why NOT?
-
-When I started this project FMA had an API to search and browse the
-archive. This client used this API. They desided to shut it down
-without warning or asking users. So NOT THANKS anymore. :(
+Thanks to http://freemusicarchive.org/ and the artist for the music!
 
 Run
 ===
