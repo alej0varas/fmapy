@@ -4,30 +4,33 @@ import unittest
 import unittest.mock
 
 
-URL_404 = "https://freemusicarchive.org/track/OX/download"
+SEARCH_URL = fmapy.SEARCH_URL
 
 
 class FmapyTests(unittest.TestCase):
-    def test_download_song_exception(self):
-        f = fmapy.Fmapy()
-        with unittest.mock.patch.object(
-            f.browser, "download_song", return_value=None
-        ), unittest.mock.patch.object(f.browser, "get_full_url", return_value=""):
-            self.assertRaises(fmapy.exceptions.FmapyError, f.download_song, URL_404)
+    def test_get_search_base_url(self):
+        self.assertEqual(SEARCH_URL, fmapy.get_search_base_url())
 
+    def test_get_search_url(self):
+        term = "song"
+        self.assertEqual(SEARCH_URL + "song", fmapy.get_search_url(term))
 
-class CLISearchTests(unittest.TestCase):
-    def test_main_fmapyerro_exception(self):
-        f = fmapy.Fmapy()
-        u = fmapy.uis.CLISearch(f)
-        with unittest.mock.patch(
-            "fmapy.browsers.FMABrowser.__next__", side_effect=(URL_404, StopIteration)
-        ), unittest.mock.patch.object(
-            f, "download_song", side_effect=fmapy.exceptions.FmapyError
-        ), unittest.mock.patch.object(
-            fmapy.uis.CLISearch, "search"
-        ):
-            u.main()
+        term = "best song"
+        self.assertEqual(SEARCH_URL + "best+song", fmapy.get_search_url(term))
+
+    @unittest.mock.patch("requests.get")
+    def test_do_search(self, mock_get):
+        term = "mock song"
+        url = fmapy.get_search_url(term)
+
+        with unittest.mock.patch("fmapy.core.get_search_url") as mock_url:
+            mock_url.return_value = url
+
+            r = fmapy.do_search(term)
+
+            mock_get.assert_called_once_with(url)
+            mock_url.assert_called_once_with(term)
+            self.assertIsInstance(r, unittest.mock.Mock)
 
 
 if __name__ == "__main__":

@@ -1,62 +1,19 @@
-import logging
-import pathlib
-import urllib
+import requests
 
 
-from . import browsers
-from . import caches
-from . import exceptions
+BASE_URL = "https://freemusicarchive.org/"
+SEARCH_URL = BASE_URL + "search/?quicksearch="
 
 
-class Fmapy:
-    def __init__(self):
-        fmapy_path = pathlib.Path.home().joinpath(".fmapy")
-        fmapy_path.mkdir(exist_ok=True)
-        cache_path = str(fmapy_path.joinpath("cache.txt"))
-        download_path = fmapy_path.joinpath("downloads")
-        try:
-            open(cache_path, "x")
-        except FileExistsError:
-            pass
-
-        self.browser = browsers.FMASearch()
-        self._cache = caches.Cache(cache_path)
-        self._download_path = download_path
-
-    def download_song(self, song):
-        if song in self._cache:
-            return
-        url_full = self.browser.get_full_url(song)
-        filename = self._get_filename_for_song(url_full)
-        content = self.browser.download_song(url_full)
-        if content:
-            self._write_song_to_file(filename, content)
-            self._cache.write(song)
-        else:
-            logging.error("Failed to download " + song)
-            raise exceptions.FmapyError
-        return filename
-
-    def _write_song_to_file(self, filename, content):
-        with open(filename, "wb") as song_file:
-            song_file.write(content)
-
-    def _get_filename_for_song(self, url):
-        path_from_url = urllib.parse.urlparse(url).path
-        cut = "/music/"
-        path = self._download_path.joinpath(
-            pathlib.Path(path_from_url[path_from_url.find(cut) + len(cut) :])
-        )
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return str(path)
+def get_search_base_url():
+    return SEARCH_URL
 
 
-def main(UI_class):
-    u = UI_class(Fmapy())
-    u.main()
+def get_search_url(term):
+    return get_search_base_url() + "+".join(term.split())
 
 
-if __name__ == "__main__":
-    import uis
-
-    main(uis.CLISearch)
+def do_search(term):
+    url = get_search_url(term)
+    r = requests.get(url)
+    return r
