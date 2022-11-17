@@ -53,6 +53,17 @@ class Pagination:
 
         return pagination
 
+    def get_pages_info(self):
+        pagination = self._soup.findChild("div", "pagination-full")
+        current = pagination.findChildren("div")[1].findChild("span").text.strip()
+        pages_soup = pagination.select("a")
+        others = {}
+        next = pages_soup.pop().attrs['href']
+        for page in pages_soup:
+            others[page.text] = page.attrs["href"]
+        info = {"current": current, "next": next, "others": others}
+        return info
+
 
 class Track:
     def __init__(self, soup):

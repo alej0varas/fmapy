@@ -27,3 +27,17 @@ class PaginationTests(unittest.TestCase):
         pagination = PaginationTests.pagination.get_items_info()
 
         self.assertDictEqual(info_expected, pagination)
+
+    def test_get_pages_info(self):
+        info_expected = {
+            "current": "1",
+            "next": "https://freemusicarchive.org/search/?adv=1&quicksearch=salsa&page=2",
+            "others": {
+                "2": "https://freemusicarchive.org/search/?adv=1&quicksearch=salsa&page=2",
+                "3": "https://freemusicarchive.org/search/?adv=1&quicksearch=salsa&page=3",
+            },
+        }
+
+        pagination = PaginationTests.pagination.get_pages_info()
+
+        self.assertEqual(info_expected, pagination)
